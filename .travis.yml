@@ -2,6 +2,7 @@ language: node_js
 node_js:
     - "0.11.15"
 before_script:
-    - npm install browserify -g
-    - npm install uglify-js -g
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
 script: npm run build
