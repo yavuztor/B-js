@@ -1,13 +1,12 @@
 # B-js: A Simple and Fast Library for Behavior Binding #
 
+[![Build Status](https://travis-ci.org/yavuztor/B-js.svg?branch=master)](https://travis-ci.org/yavuztor/B-js)
+
 B-js is a simple and fast behavior binding library inspired by KnockoutJS.
 It resembles KnockoutJS in many ways, but it is fundamentally different in implementation. It is much smaller and more performant than KnockoutJS, AngularJS, and in some cases even ReactJS.
 
 ### Quick Links ###
 
-* [Download](https://bitbucket.org/ytor/bjs/downloads)
-* [Documentation](https://bitbucket.org/ytor/bjs/wiki/Home)
-* [Issues](https://bitbucket.org/ytor/bjs/issues)
 
 ### How do I use it? ###
 
