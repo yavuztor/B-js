@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "node dist/clean.js",
     "browserify": "browserify src/B.js -o dist/B.js",
-    "uglify": "uglifyjs target/B.js > target/B.min.js",
+    "uglify": "uglifyjs dist/B.js > dist/B.min.js",
     "build": "npm run clean && npm run browserify && npm run uglify",
     "test": "echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
     "test-slimerjs": "slimerjs spec/run-jasmine.js",
@@ -19,6 +19,7 @@
   "devDependencies": {
     "browserify": "latest",
     "phantomjs": "^2.1.2",
+    "phantomjs-prebuilt": "^2.1.3",
     "slimerjs": "^0.9.6-2",
     "uglify-js": "latest"
   },
