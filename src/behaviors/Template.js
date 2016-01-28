@@ -50,7 +50,7 @@ Template.prototype.applyTemplate = function(template, data) {
 		this.lastData = data;
 
         // attach it back
-        if (nafter) nparent.insertBefore(this.element, after);
+        if (nafter) nparent.insertBefore(this.element, nafter);
         else if (nparent) nparent.appendChild(this.element);
 
 		if (typeof data.onattach === "function") data.onattach(this.element);
