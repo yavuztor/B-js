@@ -8,7 +8,7 @@
     "browserify": "browserify src/B.js -o dist/B.js",
     "uglify": "uglifyjs dist/B.js > dist/B.min.js",
     "build": "npm run clean && npm run browserify && npm run uglify && npm test",
-    "test": "echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
+    "test": "echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js && echo \"\" && echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js",
     "test-slimerjs": "slimerjs spec/run-jasmine.js",
     "test-phantomjs": "phantomjs spec/run-jasmine.js"
   },
