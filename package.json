@@ -4,7 +4,7 @@
   "description": "A simple binding nano library",
   "main": "src/B.js",
   "scripts": {
-    "test": "npm run build && echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
+    "test": "echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
     "test-slimerjs": "slimerjs spec/run-jasmine.js",
     "test-phantomjs": "phantomjs spec/run-jasmine.js",
     "browserify": "browserify src/B.js -o target/B.js",

@@ -1,4 +1,7 @@
 language: node_js
 node_js:
     - "0.11.15"
+before_script:
+    - npm install browserify -g
+    - npm install uglify-js -g
 script: npm run build
