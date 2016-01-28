@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "browserify": "latest",
-    "phantomjs-prebuilt": "^2.1.2",
+    "phantomjs": "^2.1.2",
     "slimerjs": "^0.9.6-2",
     "uglify-js": "latest"
   },
