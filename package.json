@@ -1,0 +1,28 @@
+{
+  "name": "B",
+  "version": "0.7.0",
+  "description": "A simple binding nano library",
+  "main": "src/B.js",
+  "scripts": {
+    "test": "npm run build && echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
+    "test-slimerjs": "slimerjs spec/run-jasmine.js",
+    "test-phantomjs": "phantomjs spec/run-jasmine.js",
+    "build": "browserify src/B.js -o target/B.js && uglifyjs target/B.js > target/B.min.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://yavuz@yavuz.tournadotravel.net:/home/yavuz/gitrepos/Bjs.git"
+  },
+  "devDependencies": {
+    "browserify": "latest",
+    "phantomjs": "^2.1.2",
+    "slimerjs": "^0.9.6-2",
+    "uglify-js": "latest"
+  },
+  "keywords": [
+    "binding",
+    "template"
+  ],
+  "author": "Yavuz Tor",
+  "license": "MIT"
+}
