@@ -7,7 +7,9 @@
     "test": "npm run build && echo \"SlimerJS:\" && slimerjs spec/run-jasmine.js && echo \"\" && echo \"PhantomJS:\" && phantomjs spec/run-jasmine.js",
     "test-slimerjs": "slimerjs spec/run-jasmine.js",
     "test-phantomjs": "phantomjs spec/run-jasmine.js",
-    "build": "browserify src/B.js -o target/B.js && uglifyjs target/B.js > target/B.min.js"
+    "browserify": "browserify src/B.js -o target/B.js",
+    "uglify": "uglifyjs target/B.js > target/B.min.js",
+    "build": "npm run browserify && npm run uglify"
   },
   "repository": {
     "type": "git",
