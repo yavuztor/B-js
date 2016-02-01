@@ -9,39 +9,46 @@ function repeat(text, times) {
 function Foreach(element, context, param) {
 	this.element = element;
 	this.context = context;
-	this.template = this.element.innerHTML;
-	this.childElementCount = this.element.children.length;
+	element.normalize();
+	this.template = this.element.innerHTML.trim();
 	this.element.innerHTML = "";
 	this.childContexts = [];
 }
 
-Foreach.prototype.update = function(data) {
+Foreach.prototype.update = function Foreach_update(data, olddata) {
 	var i,
 	    context = this.context,
-		element = this.element,
-		ghost = this.ghost,
-		childElementCount = this.childElementCount;
+		element = this.element;
 
 	if (data == null || data.length == 0) {
-		for (i = 0, len=element.children.length; i<len; i++) {
-	        Binding.remove(element.children.item(i));
+		for (i = 0, len=element.childNodes.length; i<len; i++) {
+			Binding.remove(element.children.item(i));
 	    }
 		element.innerHTML = "";
 		return;
 	}
 
 	// Now, reset the html content and apply bindings.
-	var nafter = element.nextSibling, nparent = element.parentNode;
-	if (nparent) nparent.removeChild(element);
-	element.innerHTML = repeat(this.template, data.length);
+	// First, remove all extra elements in the end.
+	var existing = 0;
+	if (olddata) {
+		childCount = element.childNodes.length / olddata.length;
+		while (element.childNodes.length > data.length * childCount) {
+			Binding.remove(element.lastChild);
+			element.removeChild(element.lastChild);
+		}
+		existing = olddata.length;
+	}
+	// Then, add html if necessary to match the data.length * childCount
+	if (existing < data.length) element.innerHTML += repeat(this.template, data.length - existing);
+
+	childCount = element.childNodes.length / data.length;
 	data.forEach(function(item, index){
 		var childContext = Binding.createChildContext(context, item, index);
-		for (var i = index * childElementCount, len = i + childElementCount; i<len; i++) {
+		for (var i = index * childCount, len = i + childCount; i<len; i++) {
 			Binding.bindContext(element.children.item(i), childContext);
 		}
 	});
-	if (nafter) nparent.insertBefore(element, nafter);
-	else if (nparent) nparent.appendChild(element);
 };
 
 Foreach.prototype.dispose = function() {
