@@ -98,9 +98,17 @@ describe("computed test suite", function(){
 		o2("O2");
 		expect(calcCount).toBe(1);
 
+		var s = c.subscribe(function(newValue, oldValue){
+			//oldValue should reflect the last returned value from calc.
+			expect(oldValue).toEqual(null);
+			expect(newValue).toEqual("O1->O2");
+		});
+
 		//This should calc and re-initialize dependecy list.
 		o1("O1");
 		expect(calcCount).toBe(2);
+
+		s.dispose();
 
 		//Now, this should cause a recalc, since now c() depends on o1 and o2.
 		o2("o2");
