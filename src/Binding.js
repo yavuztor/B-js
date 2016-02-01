@@ -10,7 +10,21 @@ function Binding(element, context, behaviorPairs) {
 	this.setContext(context);
 }
 
+function sameContext(ctx1, ctx2) {
+	if (ctx1 == ctx2) return true;
+	return (ctx1
+		&& ctx2
+		&& ctx1.$data == ctx2.$data
+		&& ctx1.$index == ctx2.$index
+		&& ctx1.$root == ctx2.$root
+		&& ctx1.$parent == ctx2.$parent
+	);
+}
+
 Binding.prototype.setContext = function(context){
+	// Check context is the same. if so, no need to touch it. just return.
+	 if (sameContext(this.context, context)) return null;
+
 	if (this.behaviors) {
 	    //Start disposing from the end. So, it provides a last-in-first-out order, like a stack.
 	    //This is to make sure the order-based relations among behaviors. Like, one behavior depends on another, so
@@ -48,8 +62,13 @@ Binding.applyBehavior = function(behaviorClass, element, context, param) {
 	var behavior = new behaviorClass(element, context, param);
 	behavior.param = param;
 	if (param && typeof behavior.update == "function") {
-		behavior.update(param());
-		param.subscribe(behavior.update.bind(behavior));
+		var updater = function(newValue, oldValue){
+			var updatefn = behavior.update.bind(behavior, newValue, oldValue);
+			if (window && window.requestAnimationFrame) window.requestAnimationFrame(updatefn);
+			else window.setTimeout(updatefn, 1000/60); // Assuming 60 frames per second
+		}
+		param.subscribe(updater);
+		updater(param())
 	}
 	return behavior;
 }
@@ -213,7 +232,7 @@ Binding.bindData = function(data, elem) {
 }
 
 Binding.bindContext = function(element, context) {
-	var descendToChildren = !NO_DESCEND.hasOwnProperty(element.tagName);
+	var descendToChildren = element.nodeType == 1 && !NO_DESCEND.hasOwnProperty(element.tagName);
 	if (Binding.existsOn(element)) {
 		var binding = Binding.get(element);
 		if (binding != null) {
