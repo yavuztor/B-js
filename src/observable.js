@@ -106,12 +106,6 @@ exports.computed = function(computerFn) {
 		return (value != null);
 	}
 
-	function setValueAndNotify(newValue) {
-		var oldValue = value;
-		value = newValue;
-		fn.notifySubscribers(value, oldValue);
-	}
-
 	function stopListeningForChanges() {
 		while (dependencySubscriptions.length > 0) dependencySubscriptions.pop().dispose();
 	}
@@ -119,16 +113,19 @@ exports.computed = function(computerFn) {
 		if (initialized) {
 			var newValue = computerFn();
 			if (value !== newValue) {
-				setValueAndNotify(newValue);
+				var oldValue = value;
+				value = newValue;
+				fn.notifySubscribers(value, oldValue);
 			}
 		}
 		else {
+			oldValue = value;
 			initialized = initialize();
-			setValueAndNotify(value);
+			fn.notifySubscribers(value, oldValue);
 		}
 	}
 	initialized = initialize();
-	
+
 	var fn = function(){
 		addToTrace(arguments.callee);
 		if (!initialized) {
