@@ -62,11 +62,7 @@ Binding.applyBehavior = function(behaviorClass, element, context, param) {
 	var behavior = new behaviorClass(element, context, param);
 	behavior.param = param;
 	if (param && typeof behavior.update == "function") {
-		var updater = function(newValue, oldValue){
-			var updatefn = behavior.update.bind(behavior, newValue, oldValue);
-			if (window && window.requestAnimationFrame) window.requestAnimationFrame(updatefn);
-			else window.setTimeout(updatefn, 1000/60); // Assuming 60 frames per second
-		}
+		var updater = behavior.update.bind(behavior);
 		param.subscribe(updater);
 		updater(param())
 	}
