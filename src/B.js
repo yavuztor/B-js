@@ -23,6 +23,7 @@ SOFTWARE.
 */
 var B = require("./observable.js");
 B.Binding = require("./Binding.js");
+B.Router = require("./Router.js");
 
 B.bindData = B.Binding.bindData;
 B.first = function(qs, elem) { return (elem||document).querySelector(qs); }
@@ -44,6 +45,5 @@ B.Binding.register("ghost", require("./behaviors/Ghost.js"));
 B.Binding.register("prop", require("./behaviors/Prop.js"));
 B.Binding.register("component", require("./behaviors/Component.js"));
 B.Binding.register("comprop", require("./behaviors/Comprop.js"));
-B.Binding.register("route", require("./behaviors/Route.js"));
 module.exports = B;
 if (typeof global.B === "undefined") global.B = B;
