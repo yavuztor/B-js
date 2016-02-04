@@ -72,7 +72,7 @@ Router.prototype.initComponent = function Router_initComponent(comp) {
 
 	function setCompValue(f, val) {
 		if(typeof comp[f] === "function") comp[f](val);
-		else if (comp.hasOwnProperty(f)) comp[f] = val;
+		else if (typeof comp[f] !== "undefined")) comp[f] = val;
 	}
 
 }
