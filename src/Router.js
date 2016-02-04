@@ -7,15 +7,16 @@ var B = require("./observable.js");
  * @param parent should be the parent router, if there is any. If not given, or supplied null, this Router will be considered root,
  * 		and therefore will watch hash changes on the window. Root router always activates the router defined in the view object when it is picked.
  */
-function Router(routes, parent) {
+function Router(routes) {
 	var self = this;
-	this.parent == parent;
 	this.view = B.observable();
 	this.routes = routes;
 	this.defaultRoute = routes[0];
-	if (parent == null) {
-		Router.rootRouters.push(this);
-	}
+}
+
+Router.prototype.start = function(skipCurrent){
+	Router.rootRouters.push(this);
+	if (!skipCurrent) this.goto(Router.parseRoute(location.hash));
 }
 
 Router.prototype.initRoutes = function Router_initRoutes() {
@@ -40,7 +41,11 @@ Router.prototype.goto = function Router_goto(routeData) {
 	var comp = (route.viewfn) ? route.viewfn.apply(route, this.pathVars()) : route.view;
 	this.initComponent(comp);
 	if (comp.router) {
-		comp.router.goto({paths: routeData.paths.slice(route.paths.length), params: routeData.params});
+		comp.router.goto({
+			parentRouter: this,
+			paths: routeData.paths.slice(route.paths.length),
+			params: routeData.params
+		});
 	}
 	this.view(comp);
 }

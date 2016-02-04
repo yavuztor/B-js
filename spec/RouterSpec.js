@@ -7,10 +7,11 @@ describe("Router", function() {
 		]);
 		router.routes[1].view.router = subrouter = new B.Router([
 			{path:"/dwg", view: {param11:"initial"}, defaults: {param11:"val11"}}
-		], router);
+		]);
 	});
 
 	function testWithPrefixes(testwith) {
+		router.start(true);
 		testwith("");
 		testwith("#!");
 		testwith("#");
@@ -74,11 +75,27 @@ describe("Router", function() {
 
 	function testWithHash(done, hash, fn) {
 		window.location.hash = hash;
+		router.start();
 		setTimeout(function(){
 			fn();
 			done();
 		}, 600);
 	}
+
+	it("should not route current location, if start is called with /*skipCurrent=*/ true", function(){
+		router.start(true);
+		expect(router.routeData == null).toBe(true);
+		expect(router.route == null).toBe(true);
+		expect(router.view() == null).toBe(true);
+	});
+
+	it("should route the current location, if start is called without an argument, or a falsy argument", function(done){
+		testWithHash(done, "", function(){
+			expect(router.routeData != null).toBe(true);
+			expect(router.route != null).toBe(true);
+			expect(router.view() != null).toBe(true);
+		});
+	});
 
 	it("should pick defaultRoute when hash path is not found", function(done){
 		testWithHash(done, "not-existing", function(){
