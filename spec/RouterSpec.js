@@ -103,4 +103,13 @@ describe("Router", function() {
 			expect(subrouter.view().param11).toBe("val11");
 		});
 	});
+
+	it("should call viewfn to obtain a view, if it is present, when a route is picked", function(done){
+		router.routes.push({path: "/test/:viewid", viewfn: function(viewid) { return {name: viewid, self: this}; } });
+		testWithHash(done, "/test/value1", function(){
+			expect(router.route).toBe(router.routes[2]);
+			expect(router.view().self).toBe(router.routes[2]);
+			expect(router.view().name).toBe("value1");
+		});
+	})
 });

@@ -3,7 +3,7 @@ var B = require("./observable.js");
 /**
  * Router objects watch haschange on window and activates the corresponding route. Possible routes
  * should be supplied to the Router when constructing.
- * @param routes should be an array of route definition objects: {path:String, view:Object = Component instance, defaults:Object = Dictionary of properties to set on view}
+ * @param routes should be an array of route definition objects: {path:String, view:Object = Component instance, viewfn:Function = a function that will have thisArg as the route and path variables as arguments, defaults:Object = Dictionary of properties to set on view}
  * @param parent should be the parent router, if there is any. If not given, or supplied null, this Router will be considered root,
  * 		and therefore will watch hash changes on the window. Root router always activates the router defined in the view object when it is picked.
  */
@@ -12,18 +12,21 @@ function Router(routes, parent) {
 	this.parent == parent;
 	this.view = B.observable();
 	this.routes = routes;
-	this.routes.forEach(function(routedef) {
-		routedef.paths = Router.parsePath(routedef.path);
-	});
 	this.defaultRoute = routes[0];
 	if (parent == null) {
 		Router.rootRouters.push(this);
 	}
 }
 
+Router.prototype.initRoutes = function Router_initRoutes() {
+	this.routes.forEach(function(routedef) {
+		if (routedef.paths == undefined) routedef.paths = Router.parsePath(routedef.path);
+	});
+}
+
 Router.prototype.goto = function Router_goto(routeData) {
 	var route = this.defaultRoute;
-
+	this.initRoutes();
 	//find the first longest match
 	this.routes.forEach(function(routedef) {
 		for (var i = 0; i < routedef.paths.length; i++) {
@@ -32,10 +35,10 @@ Router.prototype.goto = function Router_goto(routeData) {
 		if (routedef.paths.length > route.paths.length) route = routedef;
 	});
 
-	var comp = route.view;
 	this.routeData = routeData;
 	this.route = route;
-	this.initComponent(route, routeData);
+	var comp = (route.viewfn) ? route.viewfn.apply(route, this.pathVars()) : route.view;
+	this.initComponent(comp);
 	if (comp.router) {
 		comp.router.goto({paths: routeData.paths.slice(route.paths.length), params: routeData.params});
 	}
@@ -47,8 +50,8 @@ Router.prototype.goto = function Router_goto(routeData) {
  * @param route the route definition that is activated. Only properties defined on the route.view object are set.
  * @param routeData the parsed route data that has the values.
  */
-Router.prototype.initComponent = function Router_initComponent(route, routeData) {
-	var self = this, comp = route.view;
+Router.prototype.initComponent = function Router_initComponent(comp) {
+	var self = this, route = this.route, routeData = this.routeData;
 
 	// set route defaults.
 	for (var f in route.defaults) {
@@ -72,6 +75,13 @@ Router.prototype.initComponent = function Router_initComponent(route, routeData)
 		else if (comp.hasOwnProperty(f)) comp[f] = val;
 	}
 
+}
+
+Router.prototype.pathVars = function Router_pathVars() {
+	var routedef = this.route;
+	return this.routeData.paths.filter(function(v, i){
+		return (routedef.paths[i].charAt(0) == ":");
+	});
 }
 
 Router.rootRouters = [];
