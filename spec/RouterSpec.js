@@ -75,11 +75,16 @@ describe("Router", function() {
 
 	function testWithHash(done, hash, fn) {
 		window.location.hash = hash;
-		router.start();
+		try {
+			router.start(true);
+		}
+		catch(err) {
+			console.log("testWithHash: Error after router.start(true)" + err.message);
+		}
 		setTimeout(function(){
 			fn();
 			done();
-		}, 600);
+		}, 1000);
 	}
 
 	it("should not route current location, if start is called with /*skipCurrent=*/ true", function(){
@@ -89,11 +94,23 @@ describe("Router", function() {
 		expect(router.view() == null).toBe(true);
 	});
 
-	it("should route the current location, if start is called without an argument, or a falsy argument", function(done){
-		testWithHash(done, "", function(){
-			expect(router.routeData != null).toBe(true);
-			expect(router.route != null).toBe(true);
-			expect(router.view() != null).toBe(true);
+	it("should route the current location, if start is called without an argument, or a falsy argument", function(){
+		router.start(false);
+		expect(router.routeData != null).toBe(true);
+		expect(router.route != null).toBe(true);
+		expect(router.view() != null).toBe(true);
+	});
+
+	it("should not keep calling the router when it throws an exception with the route", function(done){
+		var calls = 0;
+		router.routes.push({path:"/sometest",
+			viewfn: function(){
+				calls++;
+				throw new Error("testmessage");
+			}
+		});
+		testWithHash(done, "/sometest", function(){
+			expect(calls).toBe(1);
 		});
 	});
 

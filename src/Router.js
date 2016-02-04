@@ -39,13 +39,15 @@ Router.prototype.goto = function Router_goto(routeData) {
 	this.routeData = routeData;
 	this.route = route;
 	var comp = (route.viewfn) ? route.viewfn.apply(route, this.pathVars()) : route.view;
-	this.initComponent(comp);
-	if (comp.router) {
-		comp.router.goto({
-			parentRouter: this,
-			paths: routeData.paths.slice(route.paths.length),
-			params: routeData.params
-		});
+	if (comp) {
+		this.initComponent(comp);
+		if (comp.router) {
+			comp.router.goto({
+				parentRouter: this,
+				paths: routeData.paths.slice(route.paths.length),
+				params: routeData.params
+			});
+		}
 	}
 	this.view(comp);
 }
@@ -139,8 +141,12 @@ function rootHandler() {
 	setInterval(function(){
 		var newHash = location.hash;
 		if (newHash != oldHash) {
-			handler();
-			oldHash = newHash;
+			try {
+				handler();
+			}
+			finally {
+				oldHash = newHash;
+			}
 		}
 	}, 200);
 })(rootHandler);
