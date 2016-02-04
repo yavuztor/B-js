@@ -25,7 +25,7 @@ describe("component behavior suite", function(){
 	it("creates and disposes component when the component constructor is given as parameter", function(){
 		node.setAttribute(B.Binding.ATTR, "component: $data");
 		B.bindData(TestComp, node);
-		var comp = B.Binding.get(node).getbehavior("component").component;
+		var comp = B.Binding.get(node).getBehavior("component").component;
 
 		expect(comp.attachCalls).toBe(1);
 		expect(comp.detachCalls).toBe(0);

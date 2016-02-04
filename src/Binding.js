@@ -73,7 +73,7 @@ Binding.applyBehavior = function(behaviorClass, element, context, param) {
  * Return the first behavior that is instance of the given behavior class.
  * The behavior class or its registered name can be used.
  */
-Binding.prototype.getbehavior = function(nameOrClass) {
+Binding.prototype.getBehavior = function(nameOrClass) {
     var cl = (typeof nameOrClass == "string") ? Binding.types[nameOrClass] : nameOrClass;
     if (this.behaviors) {
         for (var i = 0, len = this.behaviors.length; i < len; i++) {
