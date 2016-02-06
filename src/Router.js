@@ -87,7 +87,7 @@ Router.prototype.initComponent = function Router_initComponent(comp) {
 Router.prototype.pathVars = function Router_pathVars() {
 	var routedef = this.route;
 	return this.routeData.paths.filter(function(v, i){
-		return (routedef.paths[i].charAt(0) == ":");
+		return (i < routedef.paths.length && routedef.paths[i].charAt(0) == ":");
 	});
 }
 
