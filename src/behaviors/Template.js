@@ -37,10 +37,6 @@ Template.prototype.applyTemplate = function(template, data) {
 		Binding.remove(children.item(i));
 	}
 	if (data != null) {
-        // detach the element to reduce the amount of re-draws.
-        var nafter = this.element.nextSibling, nparent = this.element.parentNode;
-        if (nparent) nparent.removeChild(this.element);
-
 		this.element.innerHTML = template;
 		children = this.element.children;
 		var childContext = Binding.createChildContext(this.context, data, 0);
@@ -48,10 +44,6 @@ Template.prototype.applyTemplate = function(template, data) {
 			Binding.bindContext(children.item(i), childContext);
 		}
 		this.lastData = data;
-
-        // attach it back
-        if (nafter) nparent.insertBefore(this.element, nafter);
-        else if (nparent) nparent.appendChild(this.element);
 
 		if (typeof data.onattach === "function") data.onattach(this.element);
 	}
