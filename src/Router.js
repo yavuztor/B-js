@@ -111,6 +111,16 @@ Router.parseRoute = function parseRoute(fullpath) {
 	return {paths: paths, params: params};
 }
 
+Router.buildHash = function(routeData, prefix) {
+	var hash = prefix + routeData.paths.join("/");
+	var ch = "?";
+	for (var f in routeData.params) {
+		hash += ch + f + "=" + routeData.params[f];
+		if (ch == "?") ch = "&";
+	}
+	return hash;
+}
+
 Router.parsePath = function parsePath(path) {
 	//remove leading characters # and !
 	var re = /#!?/g;

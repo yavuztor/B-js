@@ -73,6 +73,37 @@ describe("Router", function() {
 		});
 	});
 
+	it("should return buildHash correctly when there is only route paths", function(){
+		testWithPrefixes(function(prefix){
+			var data = {paths:["login"], params:{}};
+			expect(B.Router.buildHash(data, prefix)).toBe(prefix + "login");
+		});
+	});
+
+	it("should return buildHash correctly when there is only route params", function(){
+		testWithPrefixes(function(prefix){
+			var data = {paths:[], params:{"field1": "val1", "field2": "val2"}};
+			expect(B.Router.buildHash(data, prefix)).toBe(prefix + "?field1=val1&field2=val2");
+		});
+	})
+
+	it("should return buildHash correctly with both route paths and params.", function(){
+		testWithPrefixes(function(prefix){
+			var data = {paths:["login"], params:{"field1": "val1", "field2": "val2"}};
+			expect(B.Router.buildHash(data, prefix)).toBe(prefix + "login?field1=val1&field2=val2");
+		});
+	});
+
+	it("should round trip between parseRoute and buildHash without loss of data`", function(){
+		testWithPrefixes(function(prefix){
+			var data = {paths:["login"], params:{"field1": "val1", "field2": "val2"}};
+			var roundtrip = B.Router.parseRoute(B.Router.buildHash(data, prefix));
+			expect(roundtrip.paths[0]).toBe(data.paths[0]);
+			expect(roundtrip.params.field1).toBe(data.params.field1);
+			expect(roundtrip.params.field2).toBe(data.params.field2);
+		});
+	})
+
 	function testWithHash(done, hash, fn) {
 		window.location.hash = hash;
 		try {
@@ -154,5 +185,5 @@ describe("Router", function() {
 			expect(router.view().self).toBe(router.routes[2]);
 			expect(router.view().name).toBe("value1");
 		});
-	})
+	});
 });
