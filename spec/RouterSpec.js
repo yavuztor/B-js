@@ -102,7 +102,24 @@ describe("Router", function() {
 			expect(roundtrip.params.field1).toBe(data.params.field1);
 			expect(roundtrip.params.field2).toBe(data.params.field2);
 		});
-	})
+	});
+
+	it("should apply filter if filterRoute function is set on the router", function(){
+		var data = {paths:["login"], params:{"field1": "val1", "field2": "val2"}},
+			filtered = {paths:["login"], params:{"field1": "filtered1", "field2": "filtered2"}},
+			calls = 0;
+
+		router.filterRoute = function(routeData) {
+			calls++;
+			return filtered;
+		}
+		router.goto(data);
+
+		expect(calls).toBe(1);
+		expect(router.routeData).toBe(filtered);
+		expect(router.routeData.params.field1).toBe("filtered1");
+		expect(router.routeData.params.field2).toBe("filtered2");
+	});
 
 	function testWithHash(done, hash, fn) {
 		window.location.hash = hash;
