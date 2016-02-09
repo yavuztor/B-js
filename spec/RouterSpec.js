@@ -94,6 +94,13 @@ describe("Router", function() {
 		});
 	});
 
+	it("should return the prefix when route.paths.length is 0 and route.params has no keys", function(){
+		testWithPrefixes(function(prefix){
+			var data = {paths:[], params: {}};
+			expect(B.Router.buildHash(data, prefix)).toBe(prefix);
+		});
+	});
+
 	it("should round trip between parseRoute and buildHash without loss of data`", function(){
 		testWithPrefixes(function(prefix){
 			var data = {paths:["login"], params:{"field1": "val1", "field2": "val2"}};
