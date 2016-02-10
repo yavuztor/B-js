@@ -66,7 +66,13 @@ function computeAndTrace(computerFn) {
 	return {value: newValue, dependencies: dependencies};
 };
 
-exports.observable = function(initialValue){
+var observablePlugins = {
+	toggle: function(){
+		this((this() == true) ? false : true);
+	}
+}
+
+function observable(initialValue){
 	var value = initialValue;
 
 	var fn = function() {
@@ -84,6 +90,9 @@ exports.observable = function(initialValue){
 			}
 		}
 	};
+	for (var p in observablePlugins) {
+		fn[p] = observablePlugins[p].bind(fn);
+	}
 
 	return subscribeable(fn, function(){
 		// If the contained value is disposable, dispose that too.
@@ -91,7 +100,7 @@ exports.observable = function(initialValue){
 	});
 };
 
-exports.computed = function(computerFn) {
+function computed(computerFn) {
 	var initialized = false;
 	var value = null;
 	var dependencySubscriptions = [];
@@ -135,6 +144,9 @@ exports.computed = function(computerFn) {
 	};
 	return subscribeable(fn, stopListeningForChanges);
 }
+
+exports.observable = observable;
+exports.computed = computed;
 
 exports.unwrap = function unwrap(val) {
 	if (typeof val === "function") return val();

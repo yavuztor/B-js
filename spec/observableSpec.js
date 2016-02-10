@@ -66,6 +66,18 @@ describe("observable test suite", function(){
 		expect(s1called).toBe(false);
 		expect(s2called).toBe(false);
 	});
+
+	it("toggles the value from false to true, and from true to false when .toggle() is called", function(){
+		var o = B.observable(true);
+		o.toggle();
+		expect(o()).toBe(false);
+
+		o.toggle();
+		expect(o()).toBe(true);
+
+		o.toggle();
+		expect(o()).toBe(false);
+	});
 });
 
 
