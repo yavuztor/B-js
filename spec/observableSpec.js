@@ -78,6 +78,26 @@ describe("observable test suite", function(){
 		o.toggle();
 		expect(o()).toBe(false);
 	});
+
+	it("sends request and sets response to the observable value when .request() is called", function(done){
+		var mock = {
+			success: function(cb){ this.successcb = cb; return this; },
+			failure: function(cb){ this.failurecb = cb; return this; },
+			send: function() {
+				setTimeout(function(self){ self.successcb("test"); }, 100, this);
+				this.sendCalled = true;
+				return this;
+			}
+		};
+		var o = B.observable(null);
+		o.request(mock);
+		expect(mock.sendCalled).toBe(true);
+
+		setTimeout(function(){
+			expect(o()).toBe("test");
+			done();
+		}, 200)
+	})
 });
 
 
@@ -312,7 +332,6 @@ describe("jsonp suite", function(){
 	});
 	function callbackFnName(){
 		var m = /callback=([^=]+)/.exec(script.src);
-		console.log(m[1]);
 		return m && m[1];
 	}
 	it("sends callback parameter set to callback function name", function(){

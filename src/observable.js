@@ -69,6 +69,11 @@ function computeAndTrace(computerFn) {
 var observablePlugins = {
 	toggle: function(){
 		this((this() == true) ? false : true);
+	},
+	request: function(req, errcallback){
+		var self = this;
+		if (typeof errcallback === "function") req.failure(errcallback);
+		return req.success(self).send();
 	}
 }
 
