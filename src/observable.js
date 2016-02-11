@@ -176,6 +176,7 @@ Http.text = function(xhr) { return xhr.responseText; };
 Http.json = function(xhr) { return JSON.parse(xhr.responseText); }
 Http.xml = function(xhr) { return xhr.responseXML; }
 
+Http.prototype.data = function(d){ this.body = d; return this; }
 Http.prototype.credentials = function(u,p) { this.username = u; this.password = p; return this; }
 Http.prototype.method = function(m) { this.verb = m; return this; }
 Http.prototype.header = function(name, value) { this.xhr.setRequestHeader(name, value); return this; }
@@ -213,14 +214,14 @@ Http.prototype.progress = function(handler){
 	return this;
 }
 
-Http.prototype.send = function(body) {
+Http.prototype.send = function() {
 	var self = this;
 	this.xhr.open(this.verb, this.url, true, this.username, this.password);
 	this.xhr.onreadystatechange = this.readyHandler.bind(this);
 	this.xhr.onprogress = this.progressHandler.bind(this);
 	this.xhr.onerror = this.errorHandler.bind(this);
 	this.xhr.onabort = function(){ self.errorHandler(new Error("aborted")); }
-	this.xhr.send(body);
+	this.xhr.send(this.body);
 	return this;
 }
 Http.prototype.readyHandler = function(event) {
@@ -250,3 +251,65 @@ Http.prototype.errorHandler = function(err) {
 }
 
 exports.http = function(url) { return new Http(url); }
+
+function Jsonp(url, callbackParam) {
+	this.url = url;
+	this.urlHasQS = this.url.indexOf("?") >= 0;
+	this.callbackQS = callbackParam || "callback";
+	this.successHandlers = [];
+	this.failureHandlers = [];
+	this.doneHandlers = [];
+}
+
+Jsonp.prototype.param = function(k, v) {
+	if(this.urlHasQS) {
+		this.url += "&" + k + "=" + encodeURIComponent(v);
+	}
+	else {
+		this.url += "?" + k + "=" + encodeURIComponent(v);
+		this.urlHasQS = true;
+	}
+	return this;
+}
+
+Jsonp.prototype.data = function(d){
+	for (var k in d){
+		this.param(k, d[k]);
+	}
+	return this;
+}
+Jsonp.prototype.send = function() {
+	var self = this,
+		callbackFnName = "Jsonp_callback_" + (new Date()).getTime(),
+		script = document.createElement("SCRIPT");
+	this.param(this.callbackQS, callbackFnName);
+	script.src = this.url;
+
+	this.doneHandlers.push(function(){
+		document.body.removeChild(script);
+		script.onerror = script.onload = null;
+		script = null;
+		delete window[callbackFnName];
+	});
+	window[callbackFnName] = function(result) {
+		self.successHandlers.forEach(function each(handler){ handler(result); });
+		self.doneHandlers.forEach(function each(handler){ handler(); });
+	};
+
+	script.onerror = function(evt) {
+		self.failureHandlers.forEach(function each(handler){ handler(evt.message); });
+		self.doneHandlers.forEach(function each(handler){ handler(); });
+	}
+
+	script.onload = function(evt) {
+		return false;
+	}
+
+	document.body.appendChild(script);
+}
+
+Jsonp.prototype.failure = Http.prototype.failure;
+Jsonp.prototype.success = Http.prototype.success;
+Jsonp.prototype.done = Http.prototype.done;
+
+exports.jsonp = function(url, callbackQS){ return new Jsonp(url, callbackQS); };

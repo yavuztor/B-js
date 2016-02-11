@@ -301,6 +301,42 @@ describe("http test suite", function(){
 			})
 			.send();
 	})
-
-
 });
+
+describe("jsonp suite", function(){
+	var appendChild, removeChild, script;
+	beforeEach(function(){
+		appendChild = spyOn(document.body, "appendChild");
+		removeChild = spyOn(document.body, "removeChild");
+		appendChild.and.callFake(function(elem){ script = elem; });
+	});
+	function callbackFnName(){
+		var m = /callback=([^=]+)/.exec(script.src);
+		console.log(m[1]);
+		return m && m[1];
+	}
+	it("sends callback parameter set to callback function name", function(){
+		B.jsonp("http://some.url.com", "callback").send();
+
+		expect(script).not.toBeUndefined();
+		expect(callbackFnName()).not.toBeNull();
+		expect(typeof window[callbackFnName()]).toBe("function");
+	});
+
+	it("calls all success handlers with the result", function(){
+		var handler = jasmine.createSpy("successHandler");
+		B.jsonp("http://some.url.com", "callback")
+			.success(handler)
+			.success(handler)
+			.send();
+
+		var res = {};
+		// Do the thing jsonp is supposed to do, manually.
+		window[callbackFnName()](res);
+
+		expect(handler.calls.count()).toBe(2);
+		expect(handler.calls.argsFor(0)).toEqual([res]);
+		expect(handler.calls.argsFor(1)).toEqual([res]);
+	})
+
+})
