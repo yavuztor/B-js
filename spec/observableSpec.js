@@ -177,3 +177,130 @@ describe("computed test suite", function(){
 
 	})
 });
+
+describe("http test suite", function(){
+	var xhr;
+	beforeEach(function(){
+		xhr = {
+			open: jasmine.createSpy("open"),
+			send: jasmine.createSpy("send"),
+			setRequestHeader: jasmine.createSpy("setRequestHeader"),
+			responseText: "",
+			responseXML: null,
+			readyState: 0
+		}
+		window.XMLHttpRequest = jasmine.createSpy("XMLHttpRequest");
+		window.XMLHttpRequest.and.callFake(function(){ return xhr; });
+
+	})
+	it("defaults to get method with text result, when sent without changes", function(){
+		var h = B.http("http://www.google.com");
+		expect(h.url).toBe("http://www.google.com");
+		expect(h.verb).toBe("GET");
+		expect(h.serialize).toBe(h.constructor.text);
+	});
+
+	it("calls xhr open with verb, method, async=true, username, and password", function(){
+		var h = B.http("http://some.url.com").method("PUT").credentials("uname", "pass").send();
+		expect(xhr.open).toHaveBeenCalledWith("PUT", "http://some.url.com", true, "uname", "pass");
+		expect(xhr.send).toHaveBeenCalled();
+	});
+
+	it("calls all success handlers and done handlers on success", function(done){
+		xhr.send.and.callFake(function(){ setTimeout(test, 100); })
+		var scalls = 0, dcalls = 0;
+		function hsuccess(r){ scalls++; }
+		function hdone() { dcalls++; }
+		var h = B.http("http://some.url.com").method("PUT")
+				.success(hsuccess)
+				.success(hsuccess)
+				.done(hdone)
+				.done(hdone)
+				.send();
+
+		function test() {
+			xhr.readyState = 4;
+			xhr.onreadystatechange({});
+			expect(scalls).toBe(2);
+			expect(dcalls).toBe(2);
+			done();
+		}
+	});
+
+	it("calls all failure handlers and done handlers on error", function(done){
+		xhr.send.and.callFake(function(){ setTimeout(test, 100); })
+		var fcalls = 0, dcalls = 0, failuremsg = "";
+		function hfailure(msg){ fcalls++; failuremsg = msg; }
+		function hdone() { dcalls++; }
+		var h = B.http("http://some.url.com").method("PUT")
+				.failure(hfailure)
+				.failure(hfailure)
+				.done(hdone)
+				.done(hdone)
+				.send();
+
+		function test() {
+			xhr.onerror({message: "error"});
+			expect(fcalls).toBe(2);
+			expect(dcalls).toBe(2);
+			expect(failuremsg).toBe("error");
+			done();
+		}
+	});
+
+	it("calls all failure handlers and done handlers on abort with message 'aborted'", function(done){
+		xhr.send.and.callFake(function(){ setTimeout(test, 100); });
+		var fcalls = 0, dcalls = 0, failuremsg = "";
+		function hfailure(msg){ fcalls++; failuremsg = msg; }
+		function hdone() { dcalls++; }
+		var h = B.http("http://some.url.com").method("PUT")
+				.failure(hfailure)
+				.failure(hfailure)
+				.done(hdone)
+				.done(hdone)
+				.send();
+
+		function test() {
+			xhr.onabort({});
+			expect(fcalls).toBe(2);
+			expect(dcalls).toBe(2);
+			expect(failuremsg).toBe("aborted");
+			done();
+		}
+	});
+
+	it("serializes responseText with JSON.parse when accept('json') is set", function(done){
+		xhr.send.and.callFake(function(){ setTimeout(test, 100); });
+		function test(){
+			xhr.responseText = JSON.stringify({name1: "value1", name2: 2, name3: true});
+			xhr.readyState = 4;
+			xhr.onreadystatechange();
+			done();
+		}
+		B.http("http://some.url.com")
+			.accept("json")
+			.success(function(r){
+				expect(r.name1).toBe("value1");
+				expect(r.name2).toBe(2);
+				expect(r.name3).toBe(true);
+			}).send();
+	});
+
+	it("returns responseXML when accept('xml') is set", function(done){
+		xhr.send.and.callFake(function(){ setTimeout(test, 100); });
+		function test(){
+			xhr.responseXML = {};
+			xhr.readyState = 4;
+			xhr.onreadystatechange();
+			done();
+		}
+		B.http("http://some.url.com")
+			.accept("xml")
+			.success(function(r){
+				expect(r).toBe(xhr.responseXML);
+			})
+			.send();
+	})
+
+
+});

@@ -156,3 +156,97 @@ exports.unwrap = function unwrap(val) {
 exports.isObservable = function(sth) {
 	return (typeof sth === "function" && typeof sth.subscribe === "function");
 };
+
+function Http(url) {
+	this.xhr = new XMLHttpRequest();
+	this.url = url;
+	this.verb = "GET";
+	this.async = true;
+	this.username = "";
+	this.password = "";
+	this.successHandlers = [];
+	this.failureHandlers = [];
+	this.progressHandlers = [];
+	this.doneHandlers = [];
+	this.serialize = Http.text;
+	this.completed = false;
+}
+
+Http.text = function(xhr) { return xhr.responseText; };
+Http.json = function(xhr) { return JSON.parse(xhr.responseText); }
+Http.xml = function(xhr) { return xhr.responseXML; }
+
+Http.prototype.credentials = function(u,p) { this.username = u; this.password = p; return this; }
+Http.prototype.method = function(m) { this.verb = m; return this; }
+Http.prototype.header = function(name, value) { this.xhr.setRequestHeader(name, value); return this; }
+Http.prototype.contentType = function(ctype) {
+	switch(ctype) {
+		case "json":	return this.header("Content-Type", "application/json; charset=utf-8");
+		case "xml":	return this.header("Content-Type", "application/xml; charset=utf-8");
+		case "text":	return this.header("Content-Type", "text/plain");
+	}
+	return this.header("Content-Type", ctype);
+}
+Http.prototype.accept = function(rtype) {
+	var h = "text/plain";
+	switch(rtype) {
+		case "json": h = "application/json"; this.serialize = Http.json; break;
+		case "xml": h = "application/xml"; this.serialize = Http.xml; break;
+		default: h = "text/plain"; this.serialize = Http.text; break;
+	}
+	return this.header("Accept", h);
+}
+Http.prototype.success = function(handler) {
+	this.successHandlers.push(handler);
+	return this;
+}
+Http.prototype.failure = function(handler){
+	this.failureHandlers.push(handler);
+	return this;
+}
+Http.prototype.done = function(handler) {
+	this.doneHandlers.push(handler);
+	return this;
+}
+Http.prototype.progress = function(handler){
+	this.progressHandlers.push(handler);
+	return this;
+}
+
+Http.prototype.send = function(body) {
+	var self = this;
+	this.xhr.open(this.verb, this.url, true, this.username, this.password);
+	this.xhr.onreadystatechange = this.readyHandler.bind(this);
+	this.xhr.onprogress = this.progressHandler.bind(this);
+	this.xhr.onerror = this.errorHandler.bind(this);
+	this.xhr.onabort = function(){ self.errorHandler(new Error("aborted")); }
+	this.xhr.send(body);
+	return this;
+}
+Http.prototype.readyHandler = function(event) {
+	if (this.xhr.readyState == 4) {
+		var result = this.serialize(this.xhr);
+		try {
+			this.successHandlers.forEach(function each(handler) {
+				var r = handler(result);
+				// if handler has a return value, use it when calling the next handler.
+				if (r !== undefined) result = r;
+			});
+		}
+		catch(err) {
+			this.errorHandler(err);
+		}
+		this.completed = true;
+		this.doneHandlers.forEach(function each(handler){ handler(); });
+	}
+}
+Http.prototype.progressHandler = function(event) {
+	this.progressHandlers.forEach(function each(handler) { handler(event); });
+}
+Http.prototype.errorHandler = function(err) {
+	this.failureHandlers.forEach(function each(handler) { handler(err.message); });
+	this.completed = true;
+	this.doneHandlers.forEach(function each(handler){ handler(); });
+}
+
+exports.http = function(url) { return new Http(url); }
