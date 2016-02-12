@@ -111,19 +111,22 @@ describe("Router", function() {
 		});
 	});
 
-	it("should apply filter if filterRoute function is set on the router", function(){
+	it("should apply beforeFilter function if it is set on the router, and do not process if it returns false", function(){
+		router.routes.push({path:"/login", view: "login"})
 		var data = {paths:["login"], params:{"field1": "val1", "field2": "val2"}},
 			filtered = {paths:["login"], params:{"field1": "filtered1", "field2": "filtered2"}},
 			calls = 0;
 
-		router.filterRoute = function(routeData) {
+		router.beforeFilter = function(routeData) {
 			calls++;
-			return filtered;
+			this.routeData = filtered;
+			return false;
 		}
 		router.goto(data);
 
 		expect(calls).toBe(1);
 		expect(router.routeData).toBe(filtered);
+		expect(router.view()).not.toBe("login");
 		expect(router.routeData.params.field1).toBe("filtered1");
 		expect(router.routeData.params.field2).toBe("filtered2");
 	});

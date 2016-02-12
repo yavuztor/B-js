@@ -26,7 +26,7 @@ Router.prototype.initRoutes = function Router_initRoutes() {
 }
 
 Router.prototype.goto = function Router_goto(routeData) {
-	if (typeof this.filterRoute === "function") routeData = this.filterRoute(routeData);
+	if (typeof this.beforeFilter === "function" && !this.beforeFilter(routeData)) return;
 	var route;
 	this.initRoutes();
 	//find the first longest match
