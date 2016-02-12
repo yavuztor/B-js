@@ -175,6 +175,7 @@ function Http(url) {
 	this.doneHandlers = [];
 	this.serialize = Http.text;
 	this.completed = false;
+	this.headers = {};
 }
 
 Http.text = function(xhr) { return xhr.responseText; };
@@ -184,7 +185,7 @@ Http.xml = function(xhr) { return xhr.responseXML; }
 Http.prototype.data = function(d){ this.body = d; return this; }
 Http.prototype.credentials = function(u,p) { this.username = u; this.password = p; return this; }
 Http.prototype.method = function(m) { this.verb = m; return this; }
-Http.prototype.header = function(name, value) { this.xhr.setRequestHeader(name, value); return this; }
+Http.prototype.header = function(name, value) { this.headers[name] = value; return this; }
 Http.prototype.contentType = function(ctype) {
 	switch(ctype) {
 		case "json":	return this.header("Content-Type", "application/json; charset=utf-8");
@@ -222,6 +223,8 @@ Http.prototype.progress = function(handler){
 Http.prototype.send = function() {
 	var self = this;
 	this.xhr.open(this.verb, this.url, true, this.username, this.password);
+	for (var h in this.headers) this.xhr.setRequestHeader(h, this.headers[h]);
+
 	this.xhr.onreadystatechange = this.readyHandler.bind(this);
 	this.xhr.onprogress = this.progressHandler.bind(this);
 	this.xhr.onerror = this.errorHandler.bind(this);
