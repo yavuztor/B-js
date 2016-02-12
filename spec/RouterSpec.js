@@ -197,7 +197,7 @@ describe("Router", function() {
 		router.routes.push({path: "/test/:viewid", viewfn: function(viewid) { return {name: viewid, self: this}; } });
 		testWithHash(done, "/test/value1", function(){
 			expect(router.route).toBe(router.routes[2]);
-			expect(router.view().self).toBe(router.routes[2]);
+			expect(router.view().self).toBe(router);
 			expect(router.view().name).toBe("value1");
 		});
 	});
@@ -206,7 +206,7 @@ describe("Router", function() {
 		router.routes.push({path: "/test/:viewid", viewfn: function(viewid) { return {name: viewid, self: this}; } });
 		testWithHash(done, "/test/value1/some/other/path/vars", function(){
 			expect(router.route).toBe(router.routes[2]);
-			expect(router.view().self).toBe(router.routes[2]);
+			expect(router.view().self).toBe(router);
 			expect(router.view().name).toBe("value1");
 		});
 	});

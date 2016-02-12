@@ -39,7 +39,7 @@ Router.prototype.goto = function Router_goto(routeData) {
 
 	this.routeData = routeData;
 	this.route = route;
-	var comp = (route.viewfn) ? route.viewfn.apply(route, this.pathVars()) : route.view;
+	var comp = (route.viewfn) ? route.viewfn.apply(this, this.pathVars()) : route.view;
 	if (comp) {
 		this.initComponent(comp);
 		if (comp.router) {
