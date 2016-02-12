@@ -27,15 +27,16 @@ Router.prototype.initRoutes = function Router_initRoutes() {
 
 Router.prototype.goto = function Router_goto(routeData) {
 	if (typeof this.filterRoute === "function") routeData = this.filterRoute(routeData);
-	var route = this.defaultRoute;
+	var route;
 	this.initRoutes();
 	//find the first longest match
 	this.routes.forEach(function(routedef) {
 		for (var i = 0; i < routedef.paths.length; i++) {
 			if (routedef.paths[i].charAt(0) != ":" && routeData.paths[i] != routedef.paths[i]) return;
 		}
-		if (routedef.paths.length > route.paths.length) route = routedef;
+		if (route == null || routedef.paths.length > route.paths.length) route = routedef;
 	});
+	if (route == null) route = this.defaultRoute;
 
 	this.routeData = routeData;
 	this.route = route;
