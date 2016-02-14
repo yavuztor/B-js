@@ -97,7 +97,16 @@ describe("observable test suite", function(){
 			expect(o()).toBe("test");
 			done();
 		}, 200)
-	})
+	});
+
+	it("append concats the given parameter to the array observable", function(){
+		var o = B.observable([]);
+		o.append(["a", "b"]);
+		
+		expect(o().length).toBe(2);
+		expect(o()[0]).toBe("a");
+		expect(o()[1]).toBe("b");
+	});
 });
 
 

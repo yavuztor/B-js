@@ -74,6 +74,9 @@ var observablePlugins = {
 		var self = this;
 		if (typeof errcallback === "function") req.failure(errcallback);
 		return req.success(self).send();
+	},
+	append: function(arr) {
+		if (Array.isArray(this())) this(this().concat(arr));
 	}
 }
 
