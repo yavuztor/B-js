@@ -46,7 +46,7 @@ Foreach.prototype.update = function Foreach_update(data, olddata) {
 	data.forEach(function(item, index){
 		var childContext = Binding.createChildContext(context, item, index);
 		for (var i = index * childCount, len = i + childCount; i<len; i++) {
-			Binding.bindContext(element.children.item(i), childContext);
+			Binding.bindContext(element.childNodes.item(i), childContext);
 		}
 	});
 };
