@@ -289,9 +289,19 @@ Jsonp.prototype.data = function(d){
 	}
 	return this;
 }
+Jsonp.prototype.createCallback = function(){
+	Jsonp.order = Jsonp.order || 0;
+	var self = this,
+		fname = "Jsonp_callback_" +  Jsonp.order++;
+	window[fname] = function(result) {
+		self.successHandlers.forEach(function each(handler){ handler(result); });
+		self.doneHandlers.forEach(function each(handler){ handler(); });
+	};
+	return fname;
+}
 Jsonp.prototype.send = function() {
 	var self = this,
-		callbackFnName = "Jsonp_callback_" + (new Date()).getTime(),
+		callbackFnName = this.createCallback(),
 		script = document.createElement("SCRIPT");
 	this.param(this.callbackQS, callbackFnName);
 	script.src = this.url;
@@ -302,10 +312,6 @@ Jsonp.prototype.send = function() {
 		script = null;
 		delete window[callbackFnName];
 	});
-	window[callbackFnName] = function(result) {
-		self.successHandlers.forEach(function each(handler){ handler(result); });
-		self.doneHandlers.forEach(function each(handler){ handler(); });
-	};
 
 	script.onerror = function(evt) {
 		self.failureHandlers.forEach(function each(handler){ handler(evt.message); });
