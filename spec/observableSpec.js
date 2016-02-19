@@ -102,7 +102,7 @@ describe("observable test suite", function(){
 	it("append concats the given parameter to the array observable", function(){
 		var o = B.observable([]);
 		o.append(["a", "b"]);
-		
+
 		expect(o().length).toBe(2);
 		expect(o()[0]).toBe("a");
 		expect(o()[1]).toBe("b");
@@ -207,7 +207,7 @@ describe("computed test suite", function(){
 	})
 });
 
-describe("http test suite", function(){
+describe("xhr test suite", function(){
 	var xhr;
 	beforeEach(function(){
 		xhr = {
@@ -223,14 +223,14 @@ describe("http test suite", function(){
 
 	})
 	it("defaults to get method with text result, when sent without changes", function(){
-		var h = B.http("http://www.google.com");
+		var h = B.xhr("http://www.google.com");
 		expect(h.url).toBe("http://www.google.com");
 		expect(h.verb).toBe("GET");
 		expect(h.serialize).toBe(h.constructor.text);
 	});
 
 	it("calls xhr open with verb, method, async=true, username, and password", function(){
-		var h = B.http("http://some.url.com").method("PUT").credentials("uname", "pass").send();
+		var h = B.xhr("http://some.url.com").method("PUT").credentials("uname", "pass").send();
 		expect(xhr.open).toHaveBeenCalledWith("PUT", "http://some.url.com", true, "uname", "pass");
 		expect(xhr.send).toHaveBeenCalled();
 	});
@@ -240,7 +240,7 @@ describe("http test suite", function(){
 		var scalls = 0, dcalls = 0;
 		function hsuccess(r){ scalls++; }
 		function hdone() { dcalls++; }
-		var h = B.http("http://some.url.com").method("PUT")
+		var h = B.xhr("http://some.url.com").method("PUT")
 				.success(hsuccess)
 				.success(hsuccess)
 				.done(hdone)
@@ -261,7 +261,7 @@ describe("http test suite", function(){
 		var fcalls = 0, dcalls = 0, failuremsg = "";
 		function hfailure(msg){ fcalls++; failuremsg = msg; }
 		function hdone() { dcalls++; }
-		var h = B.http("http://some.url.com").method("PUT")
+		var h = B.xhr("http://some.url.com").method("PUT")
 				.failure(hfailure)
 				.failure(hfailure)
 				.done(hdone)
@@ -282,7 +282,7 @@ describe("http test suite", function(){
 		var fcalls = 0, dcalls = 0, failuremsg = "";
 		function hfailure(msg){ fcalls++; failuremsg = msg; }
 		function hdone() { dcalls++; }
-		var h = B.http("http://some.url.com").method("PUT")
+		var h = B.xhr("http://some.url.com").method("PUT")
 				.failure(hfailure)
 				.failure(hfailure)
 				.done(hdone)
@@ -306,7 +306,7 @@ describe("http test suite", function(){
 			xhr.onreadystatechange();
 			done();
 		}
-		B.http("http://some.url.com")
+		B.xhr("http://some.url.com")
 			.accept("json")
 			.success(function(r){
 				expect(r.name1).toBe("value1");
@@ -323,7 +323,7 @@ describe("http test suite", function(){
 			xhr.onreadystatechange();
 			done();
 		}
-		B.http("http://some.url.com")
+		B.xhr("http://some.url.com")
 			.accept("xml")
 			.success(function(r){
 				expect(r).toBe(xhr.responseXML);

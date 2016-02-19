@@ -261,7 +261,7 @@ Http.prototype.errorHandler = function(err) {
 	this.doneHandlers.forEach(function each(handler){ handler(); });
 }
 
-exports.http = function(url) { return new Http(url); }
+exports.xhr = function(url) { return new Http(url); }
 
 function Jsonp(url, callbackParam) {
 	this.url = url;
