@@ -238,8 +238,8 @@ describe("xhr test suite", function(){
 	it("calls all success handlers and done handlers on success", function(done){
 		xhr.send.and.callFake(function(){ setTimeout(test, 100); })
 		var scalls = 0, dcalls = 0;
-		function hsuccess(r){ scalls++; }
-		function hdone() { dcalls++; }
+		function hsuccess(r){ scalls++; expect(this).toBe(h); }
+		function hdone() { dcalls++; expect(this).toBe(h);}
 		var h = B.xhr("http://some.url.com").method("PUT")
 				.success(hsuccess)
 				.success(hsuccess)
@@ -353,7 +353,7 @@ describe("jsonp suite", function(){
 
 	it("calls all success handlers with the result", function(){
 		var handler = jasmine.createSpy("successHandler");
-		B.jsonp("http://some.url.com", "callback")
+		var jp = B.jsonp("http://some.url.com", "callback")
 			.success(handler)
 			.success(handler)
 			.send();
@@ -365,6 +365,7 @@ describe("jsonp suite", function(){
 		expect(handler.calls.count()).toBe(2);
 		expect(handler.calls.argsFor(0)).toEqual([res]);
 		expect(handler.calls.argsFor(1)).toEqual([res]);
+		expect(handler.calls.first()).toEqual({object: jp, args:[res], returnValue:undefined});
 	})
 
 })

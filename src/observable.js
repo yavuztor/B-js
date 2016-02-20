@@ -236,11 +236,12 @@ Http.prototype.send = function() {
 	return this;
 }
 Http.prototype.readyHandler = function(event) {
+	var self = this;
 	if (this.xhr.readyState == 4) {
 		var result = this.serialize(this.xhr);
 		try {
 			this.successHandlers.forEach(function each(handler) {
-				var r = handler(result);
+				var r = handler.call(self, result);
 				// if handler has a return value, use it when calling the next handler.
 				if (r !== undefined) result = r;
 			});
@@ -249,16 +250,18 @@ Http.prototype.readyHandler = function(event) {
 			this.errorHandler(err);
 		}
 		this.completed = true;
-		this.doneHandlers.forEach(function each(handler){ handler(); });
+		this.doneHandlers.forEach(function each(handler){ handler.call(self); });
 	}
 }
 Http.prototype.progressHandler = function(event) {
-	this.progressHandlers.forEach(function each(handler) { handler(event); });
+	var self = this;
+	this.progressHandlers.forEach(function each(handler) { handler.call(self, event); });
 }
 Http.prototype.errorHandler = function(err) {
-	this.failureHandlers.forEach(function each(handler) { handler(err.message); });
+	var self = this;
+	this.failureHandlers.forEach(function each(handler) { handler.call(self, err.message); });
 	this.completed = true;
-	this.doneHandlers.forEach(function each(handler){ handler(); });
+	this.doneHandlers.forEach(function each(handler){ handler.call(self); });
 }
 
 exports.xhr = function(url) { return new Http(url); }
@@ -294,8 +297,8 @@ Jsonp.prototype.createCallback = function(){
 	var self = this,
 		fname = "Jsonp_callback_" +  Jsonp.order++;
 	window[fname] = function(result) {
-		self.successHandlers.forEach(function each(handler){ handler(result); });
-		self.doneHandlers.forEach(function each(handler){ handler(); });
+		self.successHandlers.forEach(function each(handler){ handler.call(self, result); });
+		self.doneHandlers.forEach(function each(handler){ handler.call(self); });
 	};
 	return fname;
 }
@@ -314,8 +317,8 @@ Jsonp.prototype.send = function() {
 	});
 
 	script.onerror = function(evt) {
-		self.failureHandlers.forEach(function each(handler){ handler(evt.message); });
-		self.doneHandlers.forEach(function each(handler){ handler(); });
+		self.failureHandlers.forEach(function each(handler){ handler.call(self, evt.message); });
+		self.doneHandlers.forEach(function each(handler){ handler.call(self); });
 	}
 
 	script.onload = function(evt) {
@@ -323,6 +326,7 @@ Jsonp.prototype.send = function() {
 	}
 
 	document.body.appendChild(script);
+	return this;
 }
 
 Jsonp.prototype.failure = Http.prototype.failure;
