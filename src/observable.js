@@ -1,42 +1,40 @@
 function subscribeable(fn, ondisposeHandler) {
-	(function(){
-		var subscribers = [];
-		fn.subscribe = function(callback, disposeCallback){
-			var subscription = {callback: callback, disposeCallback: disposeCallback};
-			subscribers.push(subscription);
-			return {
-				dispose:function(){
-					subscribers = subscribers.filter(function(itm){ return (itm != subscription); });
-				}
-			};
+	var subscribers = [];
+	fn.subscribe = function(callback, disposeCallback){
+		var subscription = {callback: callback, disposeCallback: disposeCallback};
+		subscribers.push(subscription);
+		return {
+			dispose:function(){
+				subscribers = subscribers.filter(function(itm){ return (itm != subscription); });
+			}
 		};
+	};
 
-		fn.dispose = function(){
-			if (ondisposeHandler) ondisposeHandler.call(fn);
-			subscribers.forEach(function(subscription) {
-				if (subscription.disposeCallback) subscription.disposeCallback(fn);
-			});
-			subscribers = [];
-		}
+	fn.dispose = function(){
+		if (ondisposeHandler) ondisposeHandler.call(fn);
+		subscribers.forEach(function(subscription) {
+			if (subscription.disposeCallback) subscription.disposeCallback(fn);
+		});
+		subscribers = [];
+	}
 
-		/**
-		 * Order of the callbacks are important. The callbacks should be called in the order
-		 * they are registered. Other Binding and behaviors depend on this order for proper function.
-		 */
-		fn.notifySubscribers = function(value, oldValue){
-			subscribers.forEach(function(subscription){
-				try {
-					subscription.callback(value, oldValue);
-				}
-				catch(err) {
-					console.log("Subscribed function threw an error!");
-					console.log(err);
-					console.log(subscription);
-				}
-			})
-		}
+	/**
+	 * Order of the callbacks are important. The callbacks should be called in the order
+	 * they are registered. Binding and behaviors depend on this order for proper function.
+	 */
+	fn.notifySubscribers = function(value, oldValue){
+		subscribers.forEach(function(subscription){
+			try {
+				subscription.callback(value, oldValue);
+			}
+			catch(err) {
+				console.log("Subscribed function threw an error!");
+				console.log(err);
+				console.log(subscription);
+			}
+		})
+	}
 
-	})();
 	return fn;
 }
 
