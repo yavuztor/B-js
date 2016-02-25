@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+	<head><title>Test Page</title>
+		<meta charset="UTF-8">
+		<style type="text/css">
+			.important { color: red; font-weight: bold; }
+		</style>
+	</head>
+	<body>
+		<template id="boxed">
+			<div style="border:1px solid #ccc; background-color: yellow; padding: 1em; float:left;">
+				<span data-binding="text: $data + ', ' + $data">name</span>
+			</div>
+			<div style="clear:both;"></div>
+		</template>
+		<div data-binding="log:'refreshed',prop: {title: 'Daddy ' + $data.last()}, template: {name:'#boxed', data: $data.first()}"></div>
+		<div data-binding="with: $data.last(), css:{important: $data.last().length > 0}">
+			<h3>Hello Mr <i data-binding="text: $data"></i></h3>
+		</div>
+		<div data-binding="text: ($data.first()||'') + ' ' + ($data.last()||''), attr: {title: 'Mr. ' + $data.last()}, style:{backgroundColor: ($data.first() && $data.first().charAt(0) == 'y') ? 'white' : 'green'}, event:{click: $data.changeCase.bind($data)}">TO BE REPLACED</div>
+		<ul>
+			<div data-binding="foreach: $data.ideas(), ghost">
+				<li data-binding="style:{backgroundColor: ($index % 2 == 0) ? 'white' : 'gray'}">
+					Idea #<span data-binding="text: $index + 1"></span>: <b data-binding="text: $data">hehe</b> is a great idea
+				</li>
+			</div>
+			<li>Last word: Be cool..</li>
+		</ul>
+		<div data-binding="text: $data.musgiveerror()">This must give an error and continue binding.</div>
+		<div style="background-color: #eee; padding:1em; margin:1em;" data-binding="component: Like, comprop: {sentiment: $data.first() + ' LIKE ' + $data.last()}"></div>
+		<script type="text/javascript" src="B.js"></script>
+		<script type="text/javascript">
+			function Like() {
+				model.lastlike = this;
+				console.log("Creating Like");
+				this.sentiment = B.observable("dislike");
+			}
+			Like.prototype.attach = function(elem, context) {
+				console.log("attaching Like to ");
+				console.log(elem);
+				var param = B.observable({name:'<p>I <b data-binding="text: $data.sentiment()"></b> this!</p>', data: this});
+				this.tplBehavior = B.Binding.applyBehavior(B.Binding.types['template'], elem, context, param);
+			}
+			Like.prototype.detach = function() {
+				console.log("Detaching Like");
+				this.tplBehavior.dispose();
+				this.tplBehavior = null;
+			}
+			Like.prototype.dispose = function() {
+				console.log("Disposing Like");
+				this.sentiment.dispose();
+			}
+			var model = {
+				"first": B.observable("yavuz"),
+				"last": B.observable("tor"),
+				"changeCase": function(data, evt) {
+					alert("evt = " + evt.toString() + "\nthis == data? " + (this == data));
+					var current = this.first();
+					this.first((current.toLowerCase() == current) ? current.toUpperCase() : current.toLowerCase() );
+				},
+				"ideas": B.observable(["a","b","c","d","e","f","g","h"])
+			};
+
+			window.onload= function() {
+				B.bindData(model);
+			};
+		</script>
+	</body>
+</html>

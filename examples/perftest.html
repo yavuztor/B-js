@@ -1,0 +1,332 @@
+<html>
+<head><title>test</title>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.2.0/knockout-min.js"></script>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/react/0.12.1/react.js"></script>
+	<script type="text/javascript" src="mithril.js"></script>
+	<script type="text/javascript" src="B.js"></script>
+	<script type="text/javascript">
+            document.addEventListener("DOMContentLoaded", function() {
+            	console.log("Starting the setups");
+                _knockout();
+                _bjs();
+				_react();
+                _raw();
+				_mithril();
+                console.log("Finished the setups");
+            });
+
+			function testForNTimes(ntimes) {
+				var times = ntimes;
+				[_knockout, _bjs, _react, _raw, _mithril].forEach(function(fn){
+					fn.sum = 0;
+					fn.count = 0;
+				});
+				function test() {
+					console.log(times--);
+					document.getElementById("run-knockout").click();
+					document.getElementById("run-bjs").click();
+					document.getElementById("run-react").click();
+					document.getElementById("run-raw").click();
+					document.getElementById("run-mithril").click();
+					if (times > 0) setTimeout(test, 400);
+				}
+				test();
+			}
+
+			function updateTime(fn, ms) {
+				fn.sum = (fn.sum) ? fn.sum + ms : ms;
+				fn.count = (fn.count) ? fn.count + 1 : 1;
+				return fn.sum / fn.count;
+			}
+
+            function _knockout() {
+                ko.applyBindings({
+                    selected: ko.observable(),
+                    data: ko.observableArray(),
+                    duration: ko.observable(),
+
+                    select: function(item) {
+                        this.selected(item.id);
+                    },
+
+                    run: function() {
+                    	console.log('knockout run');
+                        var arr = _buildData(),
+                            date = new Date();
+
+                        this.selected(null);
+                        this.data(arr);
+						var ms = (new Date() - date);
+                        this.duration(updateTime(_knockout, ms) + " ms");
+                    }
+                }, document.getElementById("knockout"));
+
+            }
+
+            function _bjs() {
+            	B.bindData({
+            		selected: B.observable(),
+            		data: B.observable(),
+            		duration: B.observable(),
+            		select: function(item) {
+            			this.selected(item.id);
+            		},
+
+            		run: function() {
+            			console.log("B js run");
+                        var self = this,
+							arr = _buildData(),
+                            date = new Date();
+
+                        this.selected(null);
+                        this.data(arr);
+						var bjroot = document.getElementById("bjscontent");
+						var ms = (new Date() - date);
+						self.duration(updateTime(_bjs, ms) + " ms");
+            		}
+				});
+            }
+
+            function _raw() {
+				var container = document.getElementById("raw"),
+					template = document.getElementById("raw-template").innerHTML;
+				document.getElementById("run-raw").onclick = function() {
+                    var data = _buildData(),
+                        date = new Date(),
+                        html = "";
+
+                    for (var i = 0; i < data.length; i++) {
+                        var render = template.replace(new RegExp("\\{\\{([A-Za-z]+)\\}\\}", "g"), function(match, n) {
+                        	if (n == "label") return data[i].label;
+                        	return match;
+                        });
+                        //render = render.replace("{{className}}", "");
+                        //render = render.replace("{{label}}", data[i].label);
+                        html += render;
+                    }
+
+                    container.innerHTML = html;
+
+					var spans = container.querySelectorAll(".test-data span");
+					for (var i = 0; i < spans.length; i++) {
+						spans[i].addEventListener("click", function() {
+							var selected = container.querySelector(".selected");
+							if (selected)
+								selected.className = "";
+							this.className = "selected";
+						});
+					}
+					var ms = (new Date() - date);
+					document.getElementById("run-raw").innerHTML = updateTime(_raw, ms) + " ms";
+                };
+            }
+
+			function _mithril() {
+				var list = m.prop([]);
+				var duration = m.prop("Run");
+				var rootelem = document.getElementById("mithrilroot");
+				function init() {
+					list([]);
+					duration("Run");
+				}
+				function run() {
+					console.log("Mithril run");
+					var data = _buildData();
+						date = new Date();
+
+					var ms = new Date() - date;
+					list(data);
+					waitFor(function(){
+						return rootelem.querySelectorAll(".mithril-row").length == 1000;
+					}).then(function(msadd){
+						duration(updateTime(_mithril, (ms + msadd)) + " ms");
+					});
+
+				}
+				function mview() {
+					return m("div", [
+						m("input", {"id": "run-mithril", "type":"button", "class": ["col-md-5", "text-right", "time"].join(" "), onclick: run, value: duration()}),
+
+						m("div", list().map(function(d){
+							return m("div", {"class": ["row","mithril-row"].join(" ")}, [
+								m("div", {"class": ["col-md-12", "test-data"]}, [
+									m("span", d.label)
+								])
+							]);
+						}))
+					]);
+				}
+				m.mount(rootelem, {controller: init, view: mview});
+			}
+
+			function _react() {
+               var Class = React.createClass({
+                   select: function(data) {
+                       this.props.selected = data.id;
+                       this.forceUpdate();
+                   },
+
+                   render: function() {
+                       var items = this.props.data.map(function(d){
+						   return React.createElement("div", { className: "row" },
+                               React.createElement("div", { className: "col-md-12 test-data" },
+                                   React.createElement("span", { className: ""}, d.label)
+                               )
+                           );
+					   });
+
+                       return React.createElement("div", null, items);
+                   }
+               });
+
+				var runReact = document.getElementById("run-react");
+				runReact.addEventListener("click", function() {
+                   var data = _buildData(),
+                       date = new Date();
+
+                   React.render(new Class({ data: data, selected: null }), document.getElementById("react"));
+				   var ms = (new Date() - date);
+                   runReact.innerHTML =  updateTime(_react, ms) + " ms";
+               });
+			}
+
+            function _buildData(count) {
+                count = count || 1000;
+
+                var adjectives = ["pretty", "large", "big", "small", "tall", "short", "long", "handsome", "plain", "quaint", "clean", "elegant", "easy", "angry", "crazy", "helpful", "mushy", "odd", "unsightly", "adorable", "important", "inexpensive", "cheap", "expensive", "fancy"];
+                var colours = ["red", "yellow", "blue", "green", "pink", "brown", "purple", "brown", "white", "black", "orange"];
+                var nouns = ["table", "chair", "house", "bbq", "desk", "car", "pony", "cookie", "sandwich", "burger", "pizza", "mouse", "keyboard"];
+                var data = [];
+                for (var i = 0; i < count; i++)
+                    data.push({id: i+1, label: adjectives[_random(adjectives.length)] + " " + colours[_random(colours.length)] + " " + nouns[_random(nouns.length)] });
+                return data;
+			}
+			function _random(max) {
+				return Math.round(Math.random()*1000)%max;
+			}
+
+			function waitFor(testFx, timeOutMillis) {
+			    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3001, //< Default Max Timeout is 3s
+			        start = performance.now(),
+					duration = 0,
+			        condition = false,
+					handlers = [];
+
+				function testAndHandle(millis) {
+					if (testFx()) {
+						duration = millis - start;
+						console.log("waitFor finished in " + duration + " milliseconds");
+						while (handlers.length > 0) {
+							try {
+								handlers.shift()(duration);
+							}
+							catch(err){
+								console.log(err);
+							}
+						}
+					}
+					else if (millis - start > timeOutMillis) {
+						console.log("waitFor timed out in " + timeOutMillis + " milliseconds");
+					}
+					else {
+						window.requestAnimationFrame(testAndHandle);
+					}
+				}
+
+				window.requestAnimationFrame(testAndHandle);
+
+				var thenable = {
+					then: function(handler) {
+						if (condition) {
+							setTimeout(handler, 100, duration);
+						}
+						else {
+							handlers.push(handler);
+						}
+						return thenable;
+					}
+				};
+
+				return thenable;
+			}
+
+	</script>
+</head>
+<body>
+ 	<ul>
+ 		<li>Source copied from: <a href="http://chrisharrington.github.io/demos/performance/">http://chrisharrington.github.io/demos/performance/</a></li>
+ 		<li>Original post for the comparison: <a href="https://www.codementor.io/reactjs/tutorial/reactjs-vs-angular-js-performance-comparison-knockout">https://www.codementor.io/reactjs/tutorial/reactjs-vs-angular-js-performance-comparison-knockout</a></li>
+ 	</ul>
+
+   <div id="knockout" class="col-md-3" style="position:fixed; left: 1em; top: 5em;">
+		<div class="row">
+			<div class="col-md-7">
+				<h3>Knockout</h3>
+			</div>
+			<button id="run-knockout" data-bind="click: run">Run</button>
+			<span data-bind="text: duration"></span>
+		</div>
+		<div data-bind="foreach: data">
+			<div class="row">
+				<div class="col-md-12 test-data">
+					<span data-bind="click: $root.select.bind($root, $data), text: $data.label, css: { selected: $data.id === $root.selected() }"></span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="bjs" class="col-md-3"  style="position:fixed; left: 20em; top: 5em;">
+		<div class="row">
+			<div class="col-md-7">
+				<h3>B js</h3>
+			</div>
+			<button id="run-bjs" data-binding="event:{click: $data.run.bind($data)}">Run</button>
+			<span data-binding="text: $data.duration()"></span>
+		</div>
+		<div id="bjscontent" data-binding="foreach: $data.data()">
+			<div class="row">
+				<div class="col-md-12 test-data">
+					<span data-binding="event:{click: $parent.select.bind($parent)}, text: $data.label"> to be replaced</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-md-3" style="position:fixed; left: 40em; top: 5em;">
+		<div class="row">
+			<div class="col-md-7">
+				<h3>Raw</h3>
+			</div>
+			<button id="run-raw">Run</button>
+		</div>
+		<div id="raw"></div>
+	</div>
+
+	<div class="col-md-3" style="position:fixed; left: 60em; top: 5em;">
+		 <div class="row">
+			 <div class="col-md-7">
+				 <h3>React</h3>
+			 </div>
+			 <button class="col-md-5 text-right time" id="run-react">Run</button>
+		 </div>
+		 <div id="react"></div>
+	 </div>
+
+	 <div id="mithril" class="col-md-3" style="position:fixed; left: 80em; top: 5em;">
+ 		 <div class="row">
+ 			 <div class="col-md-7">
+ 				 <h3>Mithril</h3>
+ 			 </div>
+ 		 </div>
+ 		 <div id="mithrilroot"></div>
+ 	 </div>
+
+        <script type="text/html" id="raw-template">
+            <div class="row">
+                <div class="col-md-12 test-data">
+                    <span class="{{className}}">{{label}}</span>
+                </div>
+            </div>
+        </script>
+</body>
+</html>
