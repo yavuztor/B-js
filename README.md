@@ -29,11 +29,19 @@ B-js is a simple and fast behavior binding library inspired by KnockoutJS. It is
 		this.element = element;
 		//Any other initialization code here..
 	}
+
+	//Called when param changes.
 	CustomBehavior.prototype.update = function(newparam, oldparam){
 		this.element.title = oldparam + " --> " + newparam;
 		//Any other tasks to perform when param is updated.
 	}
 
+	//Called when element is about to be removed.
+	CustomBehavior.prototype.dispose = function(){
+		// TODO: clean up if necessary.
+	}
+
+	//Register the behavior
 	B.Binding.register("custom", CustomBehavior)
 	```
 
@@ -73,7 +81,7 @@ That's it. After this point, the changes you will make to observable values will
 
 ### Performance ###
 
-B-js was created with performance in mind. A more formal performance test will be created in near future, but initial tests show B-js is about 4 times faster than KnockoutJS, and about 2 times faster than AngularJS, when processing bindings for an array with 1000 elements.
+B-js was created with performance in mind. A more formal performance test will be created in near future, but initial tests show B-js is about 4 times faster than KnockoutJS, and about 2 times faster than AngularJS, when processing bindings for an array with 1000 elements. [View the test page to see the performance comparison](http://yavuztor.github.io/B-js/examples/perftest.html).
 
 ### Contribution guidelines ###
 
