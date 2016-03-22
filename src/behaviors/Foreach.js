@@ -9,14 +9,27 @@ function repeat(text, times) {
 function Foreach(element, context, param) {
 	this.element = element;
 	this.context = context;
-	element.normalize();
-	this.template = this.element.innerHTML.trim();
+	element.innerHTML = element.innerHTML.trim();
+	this.template = this.element.innerHTML;
+	var childCount = element.childNodes.length;
+	var wrappedByText = (element.firstChild.nodeType == 3) && (element.lastChild.nodeType == 3);
+	if (wrappedByText) {
+		this.getChildCount = function(len) {
+			if (len == 0) return 0;
+			return (len - 1) * (childCount - 1) + childCount;
+		};
+	}
+	else {
+		this.getChildCount = function(len){
+			if (len == 0) return 0;
+			return len * childCount;
+		}
+	}
 	this.element.innerHTML = "";
-	this.childContexts = [];
 }
 
 Foreach.prototype.update = function Foreach_update(data, olddata) {
-	var i,
+	var i, self = this,
 	    context = this.context,
 		element = this.element;
 
@@ -28,27 +41,36 @@ Foreach.prototype.update = function Foreach_update(data, olddata) {
 		return;
 	}
 
-	// Now, reset the html content and apply bindings.
+	this.resetInnerHtml(data, olddata);
+
+	var elemIndex = 0;
+	data.forEach(function(item, index){
+		//if (olddata && index < olddata.length && olddata[index] == data[index]) return;
+		var childContext = Binding.createChildContext(context, item, index);
+		for (var elemCount = self.getChildCount(index + 1);elemIndex < elemCount; elemIndex++) {
+			Binding.bindContext(element.childNodes.item(elemIndex), childContext);
+		}
+	});
+};
+
+Foreach.prototype.resetInnerHtml = function Foreach_resetInnerHtml(data, olddata) {
+	for (var i = 0, len=this.element.childNodes.length;i<len;i++) {
+		Binding.remove(this.element.childNodes.item(i));
+	}
+	this.element.innerHTML = repeat(this.template, data.length);
+	/*
 	// First, remove all extra elements in the end.
-	var existing = 0;
+	var existing = 0, element = this.element;
 	if (olddata) {
-		childCount = element.childNodes.length / olddata.length;
-		while (element.childNodes.length > data.length * childCount) {
-			Binding.remove(element.lastChild);
-			element.removeChild(element.lastChild);
+		while (this.element.childNodes.length > this.getChildCount(data.length)) {
+			Binding.remove(this.element.lastChild);
+			element.removeChild(this.element.lastChild);
 		}
 		existing = olddata.length;
 	}
-	// Then, add html if necessary to match the data.length * childCount
-	if (existing < data.length) element.innerHTML += repeat(this.template, data.length - existing);
-
-	childCount = element.childNodes.length / data.length;
-	data.forEach(function(item, index){
-		var childContext = Binding.createChildContext(context, item, index);
-		for (var i = index * childCount, len = i + childCount; i<len; i++) {
-			Binding.bindContext(element.childNodes.item(i), childContext);
-		}
-	});
+	// Then, add html in the end, if necessary
+	if (existing < data.length) this.element.innerHTML += repeat(this.template, data.length - existing);
+	*/
 };
 
 Foreach.prototype.dispose = function() {
