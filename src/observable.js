@@ -74,7 +74,16 @@ var observablePlugins = {
 		return req.success(self).send();
 	},
 	append: function(arr) {
-		if (Array.isArray(this())) this(this().concat(arr));
+		if (Array.isArray(this())) {
+			if (Array.isArray(arr)) this(this().concat(arr));
+			else this(this().concat([arr]));
+		}
+	},
+	prepend: function(arr) {
+		if (Array.isArray(this())) {
+			if (Array.isArray(arr)) this(arr.concat(this()));
+			else this([arr].concat(this()));
+		}
 	}
 }
 
