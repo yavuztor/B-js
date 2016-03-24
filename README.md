@@ -85,8 +85,9 @@ There are a list of behaviors that B-js provides out of the box.
 
 * `css` takes an object hash where each key is a css class name and the value is a boolean indicating existence of class name. When true, the class name is added to the element, when false it is removed.
 * `style` takes an object hash where each key is a style name *in camelCase*, as you would call it on DOM, like `element.style.backgroundColor = 'red'`. In this case the behavior parameter will be `{backgroundColor: "red"}`.
-`{title: "Hello"}`, then the element's title attribute will be set to `Hello`.
-* `attr` takes an object hash where each key corresponds to an html attribute which will be set with the value. For instance, if the parameter is * `prop` takes an object hash where each key is a property on the DOM node to be set. This uses the DOM object to set the value, instead of setAttribute.
+
+* `attr` takes an object hash where each key corresponds to an html attribute which will be set with the value. For instance, if the parameter is `{title: "Hello"}`, then it will be like calling `element.setAttribute("title", "Hello")`.
+* `prop` takes an object hash where each key is a property on the DOM node to be set. This uses the DOM object to set the value, instead of setAttribute.
 * `event` takes an object hash where each key corresponds to an event to listen and the value corresponds to the event handler function for that event. The event handler is called with two arguments: $data and the event, like `handler($data, event)`. This allows writing your view models without DOM ties, unless you need to view the event object.
 * `click` takes an event handler function as a parameter and calls it when the element is clicked. As with all event handler calls in B-js, the first parameter sent to the handler is `$data`.
 * `foreach` takes an array parameter and applies the inner html as a template to each item in the array.
