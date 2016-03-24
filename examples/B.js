@@ -25,6 +25,7 @@ SOFTWARE.
 */
 var B = require("./observable.js");
 B.Binding = require("./Binding.js");
+B.Router = require("./Router.js");
 
 B.bindData = B.Binding.bindData;
 B.first = function(qs, elem) { return (elem||document).querySelector(qs); }
@@ -46,13 +47,11 @@ B.Binding.register("ghost", require("./behaviors/Ghost.js"));
 B.Binding.register("prop", require("./behaviors/Prop.js"));
 B.Binding.register("component", require("./behaviors/Component.js"));
 B.Binding.register("comprop", require("./behaviors/Comprop.js"));
-B.Binding.register("route", require("./behaviors/Route.js"));
-B.Binding.register("dropFiles", require("./behaviors/DropFiles.js"));
 module.exports = B;
 if (typeof global.B === "undefined") global.B = B;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Binding.js":2,"./behaviors/Attr.js":3,"./behaviors/Checked.js":4,"./behaviors/Click.js":5,"./behaviors/Component.js":6,"./behaviors/Comprop.js":7,"./behaviors/Css.js":8,"./behaviors/DropFiles.js":9,"./behaviors/Event.js":10,"./behaviors/Foreach.js":11,"./behaviors/Ghost.js":12,"./behaviors/Log.js":13,"./behaviors/Prop.js":14,"./behaviors/Route.js":15,"./behaviors/Style.js":16,"./behaviors/Template.js":17,"./behaviors/Text.js":18,"./behaviors/Value.js":19,"./behaviors/With.js":20,"./observable.js":21}],2:[function(require,module,exports){
+},{"./Binding.js":2,"./Router.js":3,"./behaviors/Attr.js":4,"./behaviors/Checked.js":5,"./behaviors/Click.js":6,"./behaviors/Component.js":7,"./behaviors/Comprop.js":8,"./behaviors/Css.js":9,"./behaviors/Event.js":10,"./behaviors/Foreach.js":11,"./behaviors/Ghost.js":12,"./behaviors/Log.js":13,"./behaviors/Prop.js":14,"./behaviors/Style.js":15,"./behaviors/Template.js":16,"./behaviors/Text.js":17,"./behaviors/Value.js":18,"./behaviors/With.js":19,"./observable.js":20}],2:[function(require,module,exports){
 var B = require("./observable.js");
 
 var NO_DESCEND = {"SCRIPT": 1, "TEMPLATE": 1}
@@ -128,7 +127,7 @@ Binding.applyBehavior = function(behaviorClass, element, context, param) {
  * Return the first behavior that is instance of the given behavior class.
  * The behavior class or its registered name can be used.
  */
-Binding.prototype.getbehavior = function(nameOrClass) {
+Binding.prototype.getBehavior = function(nameOrClass) {
     var cl = (typeof nameOrClass == "string") ? Binding.types[nameOrClass] : nameOrClass;
     if (this.behaviors) {
         for (var i = 0, len = this.behaviors.length; i < len; i++) {
@@ -313,7 +312,175 @@ Binding.createChildContext = function(context, data, index) {
 }
 module.exports = Binding;
 
-},{"./observable.js":21}],3:[function(require,module,exports){
+},{"./observable.js":20}],3:[function(require,module,exports){
+var B = require("./observable.js");
+
+/**
+ * Router objects watch haschange on window and activates the corresponding route. Possible routes
+ * should be supplied to the Router when constructing.
+ * @param routes should be an array of route definition objects: {path:String, view:Object = Component instance, viewfn:Function = a function that will have thisArg as the route and path variables as arguments, defaults:Object = Dictionary of properties to set on view}
+ * @param parent should be the parent router, if there is any. If not given, or supplied null, this Router will be considered root,
+ * 		and therefore will watch hash changes on the window. Root router always activates the router defined in the view object when it is picked.
+ */
+function Router(routes) {
+	var self = this;
+	this.view = B.observable();
+	this.routes = routes;
+	this.defaultRoute = routes[0];
+}
+
+Router.prototype.start = function(skipCurrent){
+	Router.rootRouters.push(this);
+	if (!skipCurrent) this.goto(Router.parseRoute(location.hash));
+}
+
+Router.prototype.initRoutes = function Router_initRoutes() {
+	this.routes.forEach(function(routedef) {
+		if (routedef.paths == undefined) routedef.paths = Router.parsePath(routedef.path);
+	});
+}
+
+Router.prototype.goto = function Router_goto(routeData) {
+	if (typeof this.beforeFilter === "function" && !this.beforeFilter(routeData)) return;
+	var route;
+	this.initRoutes();
+	//find the first longest match
+	this.routes.forEach(function(routedef) {
+		for (var i = 0; i < routedef.paths.length; i++) {
+			if (routedef.paths[i].charAt(0) != ":" && routeData.paths[i] != routedef.paths[i]) return;
+		}
+		if (route == null || routedef.paths.length > route.paths.length) route = routedef;
+	});
+	if (route == null) route = this.defaultRoute;
+
+	this.routeData = routeData;
+	this.route = route;
+	var comp = (route.viewfn) ? route.viewfn.apply(this, this.pathVars()) : route.view;
+	if (comp) {
+		this.initComponent(comp);
+		if (comp.router) {
+			comp.router.goto({
+				parentRouter: this,
+				paths: routeData.paths.slice(route.paths.length),
+				params: routeData.params
+			});
+		}
+	}
+	this.view(comp);
+}
+
+/**
+ * Sets default values, path variables, and querystring parameters in order on the view object.
+ * @param route the route definition that is activated. Only properties defined on the route.view object are set.
+ * @param routeData the parsed route data that has the values.
+ */
+Router.prototype.initComponent = function Router_initComponent(comp) {
+	var self = this, route = this.route, routeData = this.routeData;
+
+	// set route defaults.
+	for (var f in route.defaults) {
+		setCompValue(f, route.defaults[f]);
+	}
+	// set path variables
+	routeData.paths.forEach(function(val, i){
+		if (i < route.paths.length && route.paths[i].charAt(0) == ":") {
+			var name = route.paths[i].substring(1);
+			setCompValue(name, val);
+		}
+	});
+
+	// set params
+	for (var f in routeData.params) {
+		setCompValue(f, routeData.params[f]);
+	}
+
+	function setCompValue(f, val) {
+		if(typeof comp[f] === "function") comp[f](val);
+		else if (typeof comp[f] !== "undefined") comp[f] = val;
+	}
+
+}
+
+Router.prototype.pathVars = function Router_pathVars() {
+	var routedef = this.route;
+	return this.routeData.paths.filter(function(v, i){
+		return (i < routedef.paths.length && routedef.paths[i].charAt(0) == ":");
+	});
+}
+
+Router.rootRouters = [];
+
+/**
+ * route.paths is the path split by / and route.params is the querystring style parameters.
+ */
+Router.parseRoute = function parseRoute(fullpath) {
+	var paths = [], params = {};
+	if (fullpath != null && fullpath.length > 0) {
+		var query = fullpath.split("?");
+		paths = Router.parsePath(query[0]);
+		if (query.length > 1) {
+			query[1].split("&").forEach(function(part){
+				var p = part.split("=");
+				params[p[0]] = p[1];
+			});
+		}
+	}
+	return {paths: paths, params: params};
+}
+
+Router.buildHash = function(routeData, prefix) {
+	var hash = prefix + routeData.paths.join("/");
+	var ch = "?";
+	for (var f in routeData.params) {
+		hash += ch + f + "=" + routeData.params[f];
+		if (ch == "?") ch = "&";
+	}
+	return hash;
+}
+
+Router.parsePath = function parsePath(path) {
+	//remove leading characters # and !
+	var re = /#!?/g;
+	if (re.exec(path)) path = path.substring(re.lastIndex);
+
+	var paths = path.split("/");
+
+	//trim the path so no empty path is left.
+	while (paths.length > 0 && paths[0] == "") paths.shift();
+	while (paths.length> 0 && paths[paths.length - 1] == "") paths.pop();
+
+	return paths;
+}
+
+function rootHandler() {
+	var route = Router.parseRoute(location.hash);
+	Router.rootRouters.forEach(function(h){
+		h.goto(route);
+	});
+}
+
+(function watchHashchange(handler) {
+	if (window.onhashchange) {
+		window.onhashchange = handler;
+		return;
+	}
+	var oldHash = location.hash;
+	setInterval(function(){
+		var newHash = location.hash;
+		if (newHash != oldHash) {
+			try {
+				handler();
+			}
+			finally {
+				oldHash = newHash;
+			}
+		}
+	}, 200);
+})(rootHandler);
+
+module.exports = Router;
+
+},{"./observable.js":20}],4:[function(require,module,exports){
 function Attr(element, context, param) {
     this.element = element;
 }
@@ -334,7 +501,7 @@ Attr.prototype.managesContent = false;
 
 module.exports = Attr;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var B = require("../observable.js")
 function Checked(element, context, param) {
     this.element = element;
@@ -373,7 +540,7 @@ Checked.prototype.managesContent = false;
 
 module.exports = Checked;
 
-},{"../observable.js":21}],5:[function(require,module,exports){
+},{"../observable.js":20}],6:[function(require,module,exports){
 function Click(element, context, param) {
 	var self = this;
     this.element = element;
@@ -393,7 +560,7 @@ Click.prototype.managesContent = false;
 
 module.exports = Click;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 function Component(element, context, param) {
 	this.element = element;
 	this.context = context;
@@ -420,7 +587,7 @@ Component.prototype.managesContent = true;
 
 module.exports = Component;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var B = require("../observable.js");
 var Component = require("./Component.js");
 
@@ -452,7 +619,7 @@ function lastComponent(behaviors) {
 
 module.exports = Comprop;
 
-},{"../observable.js":21,"./Component.js":6}],8:[function(require,module,exports){
+},{"../observable.js":20,"./Component.js":7}],9:[function(require,module,exports){
 function Css(element, context, param) {
     this.element = element;
     this.context = context;
@@ -482,55 +649,7 @@ Css.prototype.managesContent = false;
 
 module.exports = Css;
 
-},{}],9:[function(require,module,exports){
-var B = require("../B");
-function DropFiles(element, context, param) {
-	this.element = element;
-	this.context = context;
-	this.param = param;
-	this.files = B.observable([]);
-	this.handlers = {
-		focus: this.focus.bind(this),
-		blur: this.blur.bind(this),
-		files: this.files.bind(this)
-	};
-	element.addEventListener("dragover", this.handlers.focus);
-	element.addEventListener("dragleave", this.handlers.blur);
-	element.addEventListener("dragend", this.handlers.blur);
-	element.addEventListener("drop", this.handlers.files);
-	window.addEventListener("blur", this.handlers.blur);
-}
-
-DropFiles.prototype.focus = function(event) {
-	event.preventDefault();
-	var h = this.param().onfocus;
-	if (h) h(this.context.$data, event);
-}
-
-DropFiles.prototype.blur = function(event) {
-	var h = this.param().onblur;
-	if (h) h(this.context.$data, event);
-}
-
-DropFiles.prototype.files = function(e) {
-	e.preventDefault();
-	var files = (e.dataTransfer || e.target).files;
-	var h = this.param().onfiles;
-	this.files(files);
-	if (h) h(files);
-}
-
-DropFiles.prototype.dispose = function() {
-	var e = this.element, h = handlers;
-	e.removeEventListener("dragover", h.focus);
-	e.removeEventListener("dragend", h.blur);
-	e.removeEventListener("dragleave", h.blur);
-	e.removeEventListener("drop", h.files);
-	window.removeEventListener("blur", h.blur);
-}
-module.exports = DropFiles;
-
-},{"../B":1}],10:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 function Event(element, context, param) {
     this.element = element;
     this.context = context;
@@ -573,14 +692,27 @@ function repeat(text, times) {
 function Foreach(element, context, param) {
 	this.element = element;
 	this.context = context;
-	element.normalize();
-	this.template = this.element.innerHTML.trim();
+	element.innerHTML = element.innerHTML.trim();
+	this.template = this.element.innerHTML;
+	var childCount = element.childNodes.length;
+	var wrappedByText = (element.firstChild.nodeType == 3) && (element.lastChild.nodeType == 3);
+	if (wrappedByText) {
+		this.getChildCount = function(len) {
+			if (len == 0) return 0;
+			return (len - 1) * (childCount - 1) + childCount;
+		};
+	}
+	else {
+		this.getChildCount = function(len){
+			if (len == 0) return 0;
+			return len * childCount;
+		}
+	}
 	this.element.innerHTML = "";
-	this.childContexts = [];
 }
 
 Foreach.prototype.update = function Foreach_update(data, olddata) {
-	var i,
+	var i, self = this,
 	    context = this.context,
 		element = this.element;
 
@@ -592,27 +724,36 @@ Foreach.prototype.update = function Foreach_update(data, olddata) {
 		return;
 	}
 
-	// Now, reset the html content and apply bindings.
+	this.resetInnerHtml(data, olddata);
+
+	var elemIndex = 0;
+	data.forEach(function(item, index){
+		//if (olddata && index < olddata.length && olddata[index] == data[index]) return;
+		var childContext = Binding.createChildContext(context, item, index);
+		for (var elemCount = self.getChildCount(index + 1);elemIndex < elemCount; elemIndex++) {
+			Binding.bindContext(element.childNodes.item(elemIndex), childContext);
+		}
+	});
+};
+
+Foreach.prototype.resetInnerHtml = function Foreach_resetInnerHtml(data, olddata) {
+	for (var i = 0, len=this.element.childNodes.length;i<len;i++) {
+		Binding.remove(this.element.childNodes.item(i));
+	}
+	this.element.innerHTML = repeat(this.template, data.length);
+	/*
 	// First, remove all extra elements in the end.
-	var existing = 0;
+	var existing = 0, element = this.element;
 	if (olddata) {
-		childCount = element.childNodes.length / olddata.length;
-		while (element.childNodes.length > data.length * childCount) {
-			Binding.remove(element.lastChild);
-			element.removeChild(element.lastChild);
+		while (this.element.childNodes.length > this.getChildCount(data.length)) {
+			Binding.remove(this.element.lastChild);
+			element.removeChild(this.element.lastChild);
 		}
 		existing = olddata.length;
 	}
-	// Then, add html if necessary to match the data.length * childCount
-	if (existing < data.length) element.innerHTML += repeat(this.template, data.length - existing);
-
-	childCount = element.childNodes.length / data.length;
-	data.forEach(function(item, index){
-		var childContext = Binding.createChildContext(context, item, index);
-		for (var i = index * childCount, len = i + childCount; i<len; i++) {
-			Binding.bindContext(element.children.item(i), childContext);
-		}
-	});
+	// Then, add html in the end, if necessary
+	if (existing < data.length) this.element.innerHTML += repeat(this.template, data.length - existing);
+	*/
 };
 
 Foreach.prototype.dispose = function() {
@@ -702,71 +843,6 @@ Prop.prototype.update = function(param) {
 module.exports = Prop;
 
 },{}],15:[function(require,module,exports){
-var B = require("../Binding.js");
-
-/**
- * Watches for hashchange and parses the route, and sets the observable given in param.
- */
-function Route(element, context, param) {
-	this.route = param();
-	observables.push(this.route);
-	this.route(parseRoute(location.hash));
-}
-
-Route.prototype.dispose = function(){
-	var self = this;
-	observables = observables.filter(function(item){
-		return (item != self.route);
-	});
-	this.route = null;
-}
-
-var observables = [];
-
-function rootHandler() {
-	var route = parseRoute(location.hash);
-	observables.forEach(function(obs){
-		obs(route);
-	});
-}
-
-/**
- * route.paths is the path split by / and route.params is the querystring style parameters.
- */
-function parseRoute(fullpath) {
-	var paths = [], params = {};
-	if (fullpath != null && fullpath.length > 1) {
-		fullpath = fullpath.substring(1);
-		var query = fullpath.split("?");
-		paths = query[0].split("/");
-		if (query.length > 1) {
-			query[1].split("&").forEach(function(part){
-				var p = part.split("=");
-				params[p[0]] = p[1];
-			});
-		}
-	}
-	return {paths: paths, params: params};
-}
-
-(function watchHashchange(handler) {
-	if (window.onhashchange) {
-		window.onhashchange = handler;
-		return;
-	}
-	var oldHash = location.hash;
-	setInterval(function(){
-		var newHash = location.hash;
-		if (newHash != oldHash) {
-			handler();
-			oldHash = newHash;
-		}
-	}, 200);
-})(rootHandler);
-
-module.exports = Route;
-
-},{"../Binding.js":2}],16:[function(require,module,exports){
 function Style(element, context, param) {
     this.element = element;
 }
@@ -781,7 +857,7 @@ Style.prototype.managesContent = false;
 
 module.exports = Style;
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var Binding = require("../Binding.js");
 
 
@@ -821,10 +897,6 @@ Template.prototype.applyTemplate = function(template, data) {
 		Binding.remove(children.item(i));
 	}
 	if (data != null) {
-        // detach the element to reduce the amount of re-draws.
-        var nafter = this.element.nextSibling, nparent = this.element.parentNode;
-        if (nparent) nparent.removeChild(this.element);
-
 		this.element.innerHTML = template;
 		children = this.element.children;
 		var childContext = Binding.createChildContext(this.context, data, 0);
@@ -832,10 +904,6 @@ Template.prototype.applyTemplate = function(template, data) {
 			Binding.bindContext(children.item(i), childContext);
 		}
 		this.lastData = data;
-
-        // attach it back
-        if (nafter) nparent.insertBefore(this.element, nafter);
-        else if (nparent) nparent.appendChild(this.element);
 
 		if (typeof data.onattach === "function") data.onattach(this.element);
 	}
@@ -853,7 +921,7 @@ Template.prototype.managesContent = true;
 
 module.exports = Template;
 
-},{"../Binding.js":2}],18:[function(require,module,exports){
+},{"../Binding.js":2}],17:[function(require,module,exports){
 function Text(element, context, param) {
     this.element = element;
 }
@@ -866,7 +934,7 @@ Text.prototype.managesContent = true;
 
 module.exports = Text;
 
-},{}],19:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var B = require("../observable.js")
 function Value(element, context, param) {
     this.element = element;
@@ -897,7 +965,7 @@ Value.prototype.managesContent = false;
 
 module.exports = Value;
 
-},{"../observable.js":21}],20:[function(require,module,exports){
+},{"../observable.js":20}],19:[function(require,module,exports){
 var Binding = require("../Binding.js");
 
 function With(element, context, param) {
@@ -934,46 +1002,44 @@ With.prototype.managesContent = true;
 
 module.exports = With;
 
-},{"../Binding.js":2}],21:[function(require,module,exports){
+},{"../Binding.js":2}],20:[function(require,module,exports){
 function subscribeable(fn, ondisposeHandler) {
-	(function(){
-		var subscribers = [];
-		fn.subscribe = function(callback, disposeCallback){
-			var subscription = {callback: callback, disposeCallback: disposeCallback};
-			subscribers.push(subscription);
-			return {
-				dispose:function(){
-					subscribers = subscribers.filter(function(itm){ return (itm != subscription); });
-				}
-			};
+	var subscribers = [];
+	fn.subscribe = function(callback, disposeCallback){
+		var subscription = {callback: callback, disposeCallback: disposeCallback};
+		subscribers.push(subscription);
+		return {
+			dispose:function(){
+				subscribers = subscribers.filter(function(itm){ return (itm != subscription); });
+			}
 		};
+	};
 
-		fn.dispose = function(){
-			if (ondisposeHandler) ondisposeHandler.call(fn);
-			subscribers.forEach(function(subscription) {
-				if (subscription.disposeCallback) subscription.disposeCallback(fn);
-			});
-			subscribers = [];
-		}
+	fn.dispose = function(){
+		if (ondisposeHandler) ondisposeHandler.call(fn);
+		subscribers.forEach(function(subscription) {
+			if (subscription.disposeCallback) subscription.disposeCallback(fn);
+		});
+		subscribers = [];
+	}
 
-		/**
-		 * Order of the callbacks are important. The callbacks should be called in the order
-		 * they are registered. Other Binding and behaviors depend on this order for proper function.
-		 */
-		fn.notifySubscribers = function(value, oldValue){
-			subscribers.forEach(function(subscription){
-				try {
-					subscription.callback(value, oldValue);
-				}
-				catch(err) {
-					console.log("Subscribed function threw an error!");
-					console.log(err);
-					console.log(subscription);
-				}
-			})
-		}
+	/**
+	 * Order of the callbacks are important. The callbacks should be called in the order
+	 * they are registered. Binding and behaviors depend on this order for proper function.
+	 */
+	fn.notifySubscribers = function(value, oldValue){
+		subscribers.forEach(function(subscription){
+			try {
+				subscription.callback(value, oldValue);
+			}
+			catch(err) {
+				console.log("Subscribed function threw an error!");
+				console.log(err);
+				console.log(subscription);
+			}
+		})
+	}
 
-	})();
 	return fn;
 }
 
@@ -1003,7 +1069,30 @@ function computeAndTrace(computerFn) {
 	return {value: newValue, dependencies: dependencies};
 };
 
-exports.observable = function(initialValue){
+var observablePlugins = {
+	toggle: function(){
+		this((this() == true) ? false : true);
+	},
+	request: function(req, errcallback){
+		var self = this;
+		if (typeof errcallback === "function") req.failure(errcallback);
+		return req.success(self).send();
+	},
+	append: function(arr) {
+		if (Array.isArray(this())) {
+			if (Array.isArray(arr)) this(this().concat(arr));
+			else this(this().concat([arr]));
+		}
+	},
+	prepend: function(arr) {
+		if (Array.isArray(this())) {
+			if (Array.isArray(arr)) this(arr.concat(this()));
+			else this([arr].concat(this()));
+		}
+	}
+}
+
+function observable(initialValue){
 	var value = initialValue;
 
 	var fn = function() {
@@ -1021,6 +1110,9 @@ exports.observable = function(initialValue){
 			}
 		}
 	};
+	for (var p in observablePlugins) {
+		fn[p] = observablePlugins[p].bind(fn);
+	}
 
 	return subscribeable(fn, function(){
 		// If the contained value is disposable, dispose that too.
@@ -1028,7 +1120,7 @@ exports.observable = function(initialValue){
 	});
 };
 
-exports.computed = function(computerFn) {
+function computed(computerFn) {
 	var initialized = false;
 	var value = null;
 	var dependencySubscriptions = [];
@@ -1073,6 +1165,9 @@ exports.computed = function(computerFn) {
 	return subscribeable(fn, stopListeningForChanges);
 }
 
+exports.observable = observable;
+exports.computed = computed;
+
 exports.unwrap = function unwrap(val) {
 	if (typeof val === "function") return val();
 	return val;
@@ -1081,5 +1176,175 @@ exports.unwrap = function unwrap(val) {
 exports.isObservable = function(sth) {
 	return (typeof sth === "function" && typeof sth.subscribe === "function");
 };
+
+function Http(url) {
+	this.xhr = new XMLHttpRequest();
+	this.url = url;
+	this.verb = "GET";
+	this.async = true;
+	this.username = "";
+	this.password = "";
+	this.successHandlers = [];
+	this.failureHandlers = [];
+	this.progressHandlers = [];
+	this.doneHandlers = [];
+	this.serialize = Http.text;
+	this.completed = false;
+	this.headers = {};
+}
+
+Http.text = function(xhr) { return xhr.responseText; };
+Http.json = function(xhr) { return JSON.parse(xhr.responseText); }
+Http.xml = function(xhr) { return xhr.responseXML; }
+
+Http.prototype.data = function(d){ this.body = d; return this; }
+Http.prototype.credentials = function(u,p) { this.username = u; this.password = p; return this; }
+Http.prototype.method = function(m) { this.verb = m; return this; }
+Http.prototype.header = function(name, value) { this.headers[name] = value; return this; }
+Http.prototype.contentType = function(ctype) {
+	switch(ctype) {
+		case "json":	return this.header("Content-Type", "application/json; charset=utf-8");
+		case "xml":	return this.header("Content-Type", "application/xml; charset=utf-8");
+		case "text":	return this.header("Content-Type", "text/plain");
+	}
+	return this.header("Content-Type", ctype);
+}
+Http.prototype.accept = function(rtype) {
+	var h = "text/plain";
+	switch(rtype) {
+		case "json": h = "application/json"; this.serialize = Http.json; break;
+		case "xml": h = "application/xml"; this.serialize = Http.xml; break;
+		default: h = "text/plain"; this.serialize = Http.text; break;
+	}
+	return this.header("Accept", h);
+}
+Http.prototype.success = function(handler) {
+	this.successHandlers.push(handler);
+	return this;
+}
+Http.prototype.failure = function(handler){
+	this.failureHandlers.push(handler);
+	return this;
+}
+Http.prototype.done = function(handler) {
+	this.doneHandlers.push(handler);
+	return this;
+}
+Http.prototype.progress = function(handler){
+	this.progressHandlers.push(handler);
+	return this;
+}
+
+Http.prototype.send = function() {
+	var self = this;
+	this.xhr.open(this.verb, this.url, true, this.username, this.password);
+	for (var h in this.headers) this.xhr.setRequestHeader(h, this.headers[h]);
+
+	this.xhr.onreadystatechange = this.readyHandler.bind(this);
+	this.xhr.onprogress = this.progressHandler.bind(this);
+	this.xhr.onerror = this.errorHandler.bind(this);
+	this.xhr.onabort = function(){ self.errorHandler(new Error("aborted")); }
+	this.xhr.send(this.body);
+	return this;
+}
+Http.prototype.readyHandler = function(event) {
+	var self = this;
+	if (this.xhr.readyState == 4) {
+		var result = this.serialize(this.xhr);
+		try {
+			this.successHandlers.forEach(function each(handler) {
+				var r = handler.call(self, result);
+				// if handler has a return value, use it when calling the next handler.
+				if (r !== undefined) result = r;
+			});
+		}
+		catch(err) {
+			this.errorHandler(err);
+		}
+		this.completed = true;
+		this.doneHandlers.forEach(function each(handler){ handler.call(self); });
+	}
+}
+Http.prototype.progressHandler = function(event) {
+	var self = this;
+	this.progressHandlers.forEach(function each(handler) { handler.call(self, event); });
+}
+Http.prototype.errorHandler = function(err) {
+	var self = this;
+	this.failureHandlers.forEach(function each(handler) { handler.call(self, err.message); });
+	this.completed = true;
+	this.doneHandlers.forEach(function each(handler){ handler.call(self); });
+}
+
+exports.xhr = function(url) { return new Http(url); }
+
+function Jsonp(url, callbackParam) {
+	this.url = url;
+	this.urlHasQS = this.url.indexOf("?") >= 0;
+	this.callbackQS = callbackParam || "callback";
+	this.successHandlers = [];
+	this.failureHandlers = [];
+	this.doneHandlers = [];
+}
+
+Jsonp.prototype.param = function(k, v) {
+	if(this.urlHasQS) {
+		this.url += "&" + k + "=" + encodeURIComponent(v);
+	}
+	else {
+		this.url += "?" + k + "=" + encodeURIComponent(v);
+		this.urlHasQS = true;
+	}
+	return this;
+}
+
+Jsonp.prototype.data = function(d){
+	for (var k in d){
+		this.param(k, d[k]);
+	}
+	return this;
+}
+Jsonp.prototype.createCallback = function(){
+	Jsonp.order = Jsonp.order || 0;
+	var self = this,
+		fname = "Jsonp_callback_" +  Jsonp.order++;
+	window[fname] = function(result) {
+		self.successHandlers.forEach(function each(handler){ handler.call(self, result); });
+		self.doneHandlers.forEach(function each(handler){ handler.call(self); });
+	};
+	return fname;
+}
+Jsonp.prototype.send = function() {
+	var self = this,
+		callbackFnName = this.createCallback(),
+		script = document.createElement("SCRIPT");
+	this.param(this.callbackQS, callbackFnName);
+	script.src = this.url;
+
+	this.doneHandlers.push(function(){
+		document.body.removeChild(script);
+		script.onerror = script.onload = null;
+		script = null;
+		delete window[callbackFnName];
+	});
+
+	script.onerror = function(evt) {
+		self.failureHandlers.forEach(function each(handler){ handler.call(self, evt.message); });
+		self.doneHandlers.forEach(function each(handler){ handler.call(self); });
+	}
+
+	script.onload = function(evt) {
+		return false;
+	}
+
+	document.body.appendChild(script);
+	return this;
+}
+
+Jsonp.prototype.failure = Http.prototype.failure;
+Jsonp.prototype.success = Http.prototype.success;
+Jsonp.prototype.done = Http.prototype.done;
+
+exports.jsonp = function(url, callbackQS){ return new Jsonp(url, callbackQS); };
 
 },{}]},{},[1]);
