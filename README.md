@@ -14,7 +14,7 @@ B-js is a simple and fast behavior binding library inspired by KnockoutJS. It is
 
 1. Download B-js and source it via script tag.
 
-* Define your model in javascript.
+2. Define your model in javascript.
 
 	```javascript
 	var minions = [
@@ -22,7 +22,7 @@ B-js is a simple and fast behavior binding library inspired by KnockoutJS. It is
 		{name: B.observable("Kevin"), likes:["banana", "apple"]}
 	];
 	```
-* Register your custom behaviors, if there are any.
+3. Register your custom behaviors, if there are any.
 
 	```javascript
 	function CustomBehavior(element, context, param) {
@@ -45,7 +45,7 @@ B-js is a simple and fast behavior binding library inspired by KnockoutJS. It is
 	B.Binding.register("custom", CustomBehavior)
 	```
 
-* Add binding statements in your html. This is just like KnockoutJS, but the binding attribute is called `data-binding`.
+4. Add binding statements in your html. This is just like KnockoutJS, but the binding attribute is called `data-binding`.
 
 	```html
 	<ul data-binding="foreach: $data">
@@ -55,7 +55,7 @@ B-js is a simple and fast behavior binding library inspired by KnockoutJS. It is
 	</ul>
 	```
 
-* Call B.bindData with your model and optionally the root element that the binding will start from. If you don't provide the second parameter, the whole page will be processed for binding.
+5. Call B.bindData with your model and optionally the root element that the binding will start from. If you don't provide the second parameter, the whole page will be processed for binding.
 
 	```javascript
 	B.bindData(mymodel);
@@ -67,7 +67,7 @@ That's it. After this point, the changes you will make to observable values will
 
 1. `B.bindData()` creates the root context and uses it to process all elements that has `data-binding` attribute.
 
-* `data-binding` attribute is parsed on each element. The format is like `name: param [, name: param ...]`:
+2. `data-binding` attribute is parsed on each element. The format is like `name: param [, name: param ...]`:
 	* _name_ refers to the name used for the behavior in registration.
 	* _param_ is a valid javascript expression that is evaluated within the element context. Context has four properties:
 		* `$data` is the model that is bound to the element.
@@ -75,9 +75,30 @@ That's it. After this point, the changes you will make to observable values will
 		* `$root` is the root model that was bound with `B.bindData`
 		* `$index` is the index of `$data` within `$parent`.
 
-* A new `B.Binding` object is created for each element and all behaviors are created and updated via call to `update` method in the order they are listed in `data-binding` attribute.
+3. A new `B.Binding` object is created for each element and all behaviors are created and updated via call to `update` method in the order they are listed in `data-binding` attribute.
 
-* When a _param_ value for a behavior changes, B-js calls the `update` method  on that behavior to let it process the change.
+4. When a _param_ value for a behavior changes, B-js calls the `update` method  on that behavior to let it process the change.
+
+### Behaviors out of the box
+
+There are a list of behaviors that B-js provides out of the box.
+
+* `css` takes an object hash where each key is a css class name and the value is a boolean indicating existence of class name. When true, the class name is added to the element, when false it is removed.
+* `style` takes an object hash where each key is a style name *in camelCase*, as you would call it on DOM, like `element.style.backgroundColor = 'red'`. In this case the behavior parameter will be `{backgroundColor: "red"}`.
+`{title: "Hello"}`, then the element's title attribute will be set to `Hello`.
+* `attr` takes an object hash where each key corresponds to an html attribute which will be set with the value. For instance, if the parameter is * `prop` takes an object hash where each key is a property on the DOM node to be set. This uses the DOM object to set the value, instead of setAttribute.
+* `event` takes an object hash where each key corresponds to an event to listen and the value corresponds to the event handler function for that event. The event handler is called with two arguments: $data and the event, like `handler($data, event)`. This allows writing your view models without DOM ties, unless you need to view the event object.
+* `click` takes an event handler function as a parameter and calls it when the element is clicked. As with all event handler calls in B-js, the first parameter sent to the handler is `$data`.
+* `foreach` takes an array parameter and applies the inner html as a template to each item in the array.
+* `text` sets the textContent of the element with the given parameter.
+* `checked` takes a boolean parameter and sets the checked attribute on a check box.
+* `log` simply logs the given parameter to console, using `console.log`. This can be used to troubleshoot your bindings.
+* `value` takes a B.observable and uses it for two-way binding to a form element. Initially, the parameter value is set on the input. Then, when user changes the value of the input element, the observable parameter is updated with the new value.
+* `with` takes a parameter and makes it the `$data` value for the template in its html.
+* `template` takes an object like `{name: ..., data: ...}`. `data` is any value that will be used as `$data` in the template processing. `name` parameter could be
+	* a reference like `"#LoginVM"` where template will be obtained from innerHTML of the element with id `LoginVM`
+	* a relative url, where template will be obtained from a given url. Note that `XMLHttpRequest` will be used for download, so Cross-Origin requests should be considered.
+	* a template string, which will be used as the template for generating content.
 
 ### Performance ###
 
